@@ -274,6 +274,57 @@ def get_profile():
         }), 500
 
 
+@auth_bp.route('/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    """Update current user profile fields (name, email)."""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json() or {}
+
+        name = str(data.get('name', '')).strip()
+        email = str(data.get('email', '')).strip().lower()
+
+        if not name or len(name) < 2:
+            return jsonify({
+                'error': 'Validation Error',
+                'message': 'Name must be at least 2 characters long'
+            }), 400
+
+        if not is_valid_email(email):
+            return jsonify({
+                'error': 'Validation Error',
+                'message': 'Invalid email format'
+            }), 400
+
+        existing = mongo.db.users.find_one({'email': email, '_id': {'$ne': ObjectId(current_user_id)}})
+        if existing:
+            return jsonify({
+                'error': 'Validation Error',
+                'message': 'Email already registered'
+            }), 409
+
+        mongo.db.users.update_one(
+            {'_id': ObjectId(current_user_id)},
+            {'$set': {'name': name, 'email': email, 'updated_at': datetime.utcnow()}},
+        )
+
+        return jsonify({
+            'message': 'Profile updated successfully',
+            'user': {
+                'id': current_user_id,
+                'name': name,
+                'email': email,
+            }
+        }), 200
+    except Exception as e:
+        print(f"Profile update error: {str(e)}")
+        return jsonify({
+            'error': 'Server Error',
+            'message': 'An error occurred while updating profile'
+        }), 500
+
+
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Clear authentication cookies."""

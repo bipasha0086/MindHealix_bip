@@ -1,5 +1,5 @@
 """
-Gemini-backed chatbot route.
+Chatbot route supporting Groq (Llama 3) and Gemini providers.
 Uses backend environment variables so API keys are not exposed to the frontend.
 """
 
@@ -15,6 +15,7 @@ from flask_jwt_extended import jwt_required
 chatbot_bp = Blueprint("chatbot", __name__)
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Lightweight in-memory controls for demo and hackathon reliability.
 _REQUEST_LOG = defaultdict(deque)
@@ -52,6 +53,24 @@ def _build_payload(user_message, context_lines):
     }
 
 
+def _build_groq_payload(user_message, context_lines, model):
+    context_text = "\n".join([line for line in context_lines if line])
+    prompt = (
+        f"Conversation context:\n{context_text}\n\n"
+        f"User message:\n{user_message}"
+    )
+
+    return {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.6,
+        "max_tokens": 220,
+    }
+
+
 def _extract_text(gemini_response):
     try:
         candidates = gemini_response.get("candidates", [])
@@ -61,6 +80,19 @@ def _extract_text(gemini_response):
         parts = candidates[0].get("content", {}).get("parts", [])
         merged = "\n".join(part.get("text", "") for part in parts if part.get("text"))
         return merged.strip() or "I am here with you. Try sharing a bit more so I can help better."
+    except Exception:
+        return "I am here with you. Try sharing a bit more so I can help better."
+
+
+def _extract_groq_text(groq_response):
+    try:
+        choices = groq_response.get("choices", [])
+        if not choices:
+            return "I am here with you. Try sharing a bit more so I can help better."
+
+        message = choices[0].get("message", {})
+        content = str(message.get("content", "")).strip()
+        return content or "I am here with you. Try sharing a bit more so I can help better."
     except Exception:
         return "I am here with you. Try sharing a bit more so I can help better."
 
@@ -91,6 +123,23 @@ def _build_cache_key(model, message, context_lines):
     return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
+def _post_json(url, body, headers, timeout=15):
+    merged_headers = {
+        "Accept": "application/json",
+        "User-Agent": "MindHealix-Backend/1.0 (+chat-assistant)",
+    }
+    merged_headers.update(headers or {})
+
+    req = request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers=merged_headers,
+        method="POST",
+    )
+    with request.urlopen(req, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
 def _prune_cache(now_ts, max_items):
     expired = [key for key, value in _CHAT_CACHE.items() if value.get("expires_at", 0) <= now_ts]
     for key in expired:
@@ -108,7 +157,7 @@ def _prune_cache(now_ts, max_items):
 @chatbot_bp.route("/chat-assistant", methods=["POST"])
 @jwt_required(optional=True)
 def chat_assistant():
-    """Generate supportive response from Gemini for chatbot requests."""
+    """Generate supportive response from configured chatbot provider."""
     data = flask_request.get_json(silent=True) or {}
     message = str(data.get("message", "")).strip()
     context_lines = data.get("context", [])
@@ -116,15 +165,24 @@ def chat_assistant():
     if not message:
         return jsonify({"message": "Message is required"}), 400
 
-    api_key = current_app.config.get("GEMINI_API_KEY", "")
-    model = current_app.config.get("GEMINI_MODEL", "gemini-1.5-flash")
+    provider = str(current_app.config.get("CHAT_PROVIDER", "groq")).lower()
+    gemini_api_key = current_app.config.get("GEMINI_API_KEY", "")
+    gemini_model = current_app.config.get("GEMINI_MODEL", "gemini-1.5-flash")
+    groq_api_key = current_app.config.get("GROQ_API_KEY", "")
+    groq_model = current_app.config.get("GROQ_MODEL", "llama-3.1-8b-instant")
     rate_window = max(1, int(current_app.config.get("CHAT_RATE_LIMIT_WINDOW_SECONDS", 60)))
     rate_max = max(1, int(current_app.config.get("CHAT_RATE_LIMIT_MAX_REQUESTS", 12)))
     cache_ttl = max(1, int(current_app.config.get("CHAT_CACHE_TTL_SECONDS", 45)))
     cache_max_items = max(20, int(current_app.config.get("CHAT_CACHE_MAX_ITEMS", 300)))
 
-    if not api_key:
-        return jsonify({"message": "Gemini API key is not configured on server"}), 503
+    if provider == "groq":
+        if not groq_api_key:
+            return jsonify({"message": "Groq API key is not configured on server"}), 503
+        model = groq_model
+    else:
+        if not gemini_api_key:
+            return jsonify({"message": "Gemini API key is not configured on server"}), 503
+        model = gemini_model
 
     client_ip = _get_client_ip()
     now_ts = time.time()
@@ -144,30 +202,33 @@ def chat_assistant():
     if cached and cached.get("expires_at", 0) > now_ts:
         return jsonify({"reply": cached["reply"], "cached": True}), 200
 
-    payload = _build_payload(message, normalized_context)
-    body = json.dumps(payload).encode("utf-8")
-    url = f"{GEMINI_API_BASE}/{model}:generateContent?key={api_key}"
-
-    req = request.Request(
-        url,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
     try:
-        with request.urlopen(req, timeout=15) as response:
-            raw = response.read().decode("utf-8")
-            parsed = json.loads(raw)
+        if provider == "groq":
+            parsed = _post_json(
+                GROQ_CHAT_COMPLETIONS_URL,
+                _build_groq_payload(message, normalized_context, model),
+                {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {groq_api_key}",
+                },
+            )
+            reply = _extract_groq_text(parsed)
+        else:
+            parsed = _post_json(
+                f"{GEMINI_API_BASE}/{model}:generateContent?key={gemini_api_key}",
+                _build_payload(message, normalized_context),
+                {"Content-Type": "application/json"},
+            )
             reply = _extract_text(parsed)
-            _CHAT_CACHE[cache_key] = {
-                "reply": reply,
-                "created_at": now_ts,
-                "expires_at": now_ts + cache_ttl,
-            }
-            return jsonify({"reply": reply, "cached": False}), 200
+
+        _CHAT_CACHE[cache_key] = {
+            "reply": reply,
+            "created_at": now_ts,
+            "expires_at": now_ts + cache_ttl,
+        }
+        return jsonify({"reply": reply, "cached": False}), 200
     except error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="ignore")
-        return jsonify({"message": "Gemini request failed", "detail": detail[:500]}), 502
+        return jsonify({"message": f"{provider.title()} request failed", "detail": detail[:500]}), 502
     except Exception as exc:
         return jsonify({"message": "Chat service unavailable", "detail": str(exc)}), 500

@@ -302,11 +302,11 @@ const AIChatbot = () => {
 
   const getFallbackForError = (errorType, safetyFirst) => {
     if (errorType === 'quota') {
-      return `Gemini AI quota abhi exceed ho gayi hai, isliye main temporary local support mode use kar raha hoon.\n\n${safetyFirst}`;
+      return `AI chat quota abhi exceed ho gayi hai, isliye main temporary local support mode use kar raha hoon.\n\n${safetyFirst}`;
     }
 
     if (errorType === 'apikey') {
-      return `Gemini API key server par properly configured nahi hai. Tab tak local support mode active hai.\n\n${safetyFirst}`;
+      return `AI provider API key server par properly configured nahi hai. Tab tak local support mode active hai.\n\n${safetyFirst}`;
     }
 
     if (errorType === 'unavailable') {

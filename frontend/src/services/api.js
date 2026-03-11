@@ -180,6 +180,27 @@ const buildRecommendations = ({ stressLevel, stressScore, mood }) => {
   return list;
 };
 
+const computeFaceStressLocal = (features = {}) => {
+  const smile = Math.max(0, Math.min(1, Number(features.smile_score || 0)));
+  const brow = Math.max(0, Math.min(1, Number(features.brow_tension_score || 0)));
+  const blink = Math.max(0, Math.min(1, Number(features.eye_blink_score || 0)));
+  const jaw = Math.max(0, Math.min(1, Number(features.jaw_tension_score || 0)));
+
+  const raw = (brow * 0.35 + jaw * 0.25 + blink * 0.2 + (1 - smile) * 0.2) * 100;
+  const score = Math.max(0, Math.min(100, Math.round(raw)));
+
+  let stress_level = 'Low';
+  if (score >= 70) stress_level = 'High';
+  else if (score >= 40) stress_level = 'Medium';
+
+  return {
+    stress_level,
+    stress_score: score,
+    confidence: 0.7,
+    prediction_source: 'local_face_heuristic',
+  };
+};
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -197,7 +218,7 @@ api.interceptors.response.use(
       // Session expired or invalid.
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.dispatchEvent(new Event('mindhealix:auth-unauthorized'));
     }
     return Promise.reject(error);
   }
@@ -209,11 +230,21 @@ export const authAPI = {
   login: (data) => api.post('/login', data),
   logout: () => api.post('/logout'),
   getProfile: () => api.get('/profile'),
+  updateProfile: (data) => api.put('/profile', data),
 };
 
 // Mood API
 export const moodAPI = {
   predictStress: (data) => api.post('/predict-stress', data),
+  predictStressFace: (features) => {
+    if (!LOCAL_MODE) return api.post('/predict-stress-face', features);
+
+    return api.post('/predict-stress-face', features).catch(() => {
+      return responseOf({
+        prediction: computeFaceStressLocal(features),
+      });
+    });
+  },
   submitMood: async (data) => {
     if (!LOCAL_MODE) return api.post('/submit-mood', data);
 

@@ -13,6 +13,23 @@ analytics_bp = Blueprint('analytics', __name__)
 # Import database
 from extensions import mongo
 
+
+def _stress_score_from_entry(entry):
+    """Return a numeric stress score for analytics aggregation."""
+    raw_score = entry.get('stress_score')
+    if isinstance(raw_score, (int, float)):
+        return float(raw_score)
+
+    level = str(entry.get('stress_level', '')).strip().lower()
+    # Fallback midpoints when historical entries do not have stress_score.
+    if level == 'low':
+        return 25.0
+    if level == 'medium':
+        return 55.0
+    if level == 'high':
+        return 85.0
+    return 0.0
+
 @analytics_bp.route('/user-dashboard', methods=['GET'])
 @jwt_required()
 def get_user_dashboard():
@@ -35,7 +52,7 @@ def get_user_dashboard():
         mood_entries = list(mongo.db.moods.find({
             'user_id': ObjectId(current_user_id),
             'date': {'$gte': thirty_days_ago}
-        }).sort('date', -1))
+        }).sort([('created_at', -1), ('date', -1)]))
         
         # Calculate statistics
         total_entries = len(mood_entries)
@@ -48,6 +65,7 @@ def get_user_dashboard():
                 },
                 'statistics': {
                     'total_entries': 0,
+                    'average_stress_score': 0,
                     'average_sentiment': 0,
                     'current_stress_level': 'Unknown',
                     'most_common_mood': 'No data'
@@ -58,6 +76,7 @@ def get_user_dashboard():
         
         # Calculate average sentiment
         avg_sentiment = sum(entry.get('sentiment_score', 0) for entry in mood_entries) / total_entries
+        avg_stress_score = sum(_stress_score_from_entry(entry) for entry in mood_entries) / total_entries
         
         # Get most common mood
         moods = [entry['mood'] for entry in mood_entries]
@@ -73,10 +92,15 @@ def get_user_dashboard():
                 'id': str(entry['_id']),
                 'mood': entry['mood'],
                 'stress_level': entry['stress_level'],
+                'stress_score': entry.get('stress_score'),
                 'sentiment_score': round(entry.get('sentiment_score', 0), 3),
+                'sleep_hours': entry.get('sleep_hours', 0),
                 'date': entry['date'].strftime('%Y-%m-%d'),
-                'has_journal': bool(entry.get('journal_text'))
+                'has_journal': bool(entry.get('journal_text')),
+                'prediction_source': entry.get('prediction_source', 'rule_based_fallback'),
             })
+
+        latest_entry = recent_entries[0] if recent_entries else None
         
         return jsonify({
             'user': {
@@ -85,12 +109,14 @@ def get_user_dashboard():
             },
             'statistics': {
                 'total_entries': total_entries,
+                'average_stress_score': round(avg_stress_score, 2),
                 'average_sentiment': round(avg_sentiment, 3),
                 'current_stress_level': current_stress_level,
                 'most_common_mood': most_common_mood,
                 'days_tracked': len(set(entry['date'].strftime('%Y-%m-%d') for entry in mood_entries))
             },
-            'recent_entries': recent_entries
+            'recent_entries': recent_entries,
+            'latest_entry': latest_entry
         }), 200
         
     except Exception as e:

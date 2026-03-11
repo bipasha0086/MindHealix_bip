@@ -1,8 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
 const USERS_KEY = 'wellnesshub_users';
 const SESSION_USER_KEY = 'user';
+const LOCAL_MODE = String(process.env.REACT_APP_LOCAL_MODE || 'true').toLowerCase() === 'true';
 
 const loadUsers = () => {
   try {
@@ -31,33 +33,98 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Seed a demo account for local-mode onboarding.
-    const existingUsers = loadUsers();
-    if (existingUsers.length === 0) {
-      saveUsers([
-        {
-          id: 'demo-user',
-          name: 'Demo User',
-          email: 'demo@wellnesshub.local',
-          password: 'Demo123',
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-    }
+    const bootstrapAuth = async () => {
+      if (LOCAL_MODE) {
+        const existingUsers = loadUsers();
+        if (existingUsers.length === 0) {
+          saveUsers([
+            {
+              id: 'demo-user',
+              name: 'Demo User',
+              email: 'demo@wellnesshub.local',
+              password: 'Demo123',
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }
 
-    const savedUser = localStorage.getItem(SESSION_USER_KEY);
-    if (savedUser) {
+        const savedUser = localStorage.getItem(SESSION_USER_KEY);
+        if (savedUser) {
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch (_error) {
+            localStorage.removeItem(SESSION_USER_KEY);
+            setUser(null);
+          }
+        }
+        setLoading(false);
+        return;
+      }
+
       try {
-        setUser(JSON.parse(savedUser));
+        const response = await authAPI.getProfile();
+        const backendUser = response?.data?.user || null;
+        if (backendUser) {
+          localStorage.setItem(SESSION_USER_KEY, JSON.stringify(backendUser));
+          setUser(backendUser);
+        } else {
+          localStorage.removeItem(SESSION_USER_KEY);
+          setUser(null);
+        }
       } catch (_error) {
         localStorage.removeItem(SESSION_USER_KEY);
         setUser(null);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    bootstrapAuth();
+  }, []);
+
+  useEffect(() => {
+    if (LOCAL_MODE) return undefined;
+
+    const onUnauthorized = () => {
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem(SESSION_USER_KEY);
+
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        window.history.pushState({}, '', '/login');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    };
+
+    window.addEventListener('mindhealix:auth-unauthorized', onUnauthorized);
+    return () => window.removeEventListener('mindhealix:auth-unauthorized', onUnauthorized);
   }, []);
 
   const login = async (email, password) => {
+    if (!LOCAL_MODE) {
+      try {
+        const response = await authAPI.login({
+          email: email.trim(),
+          password,
+        });
+        const backendUser = response?.data?.user;
+
+        if (!backendUser) {
+          return { success: false, error: 'Login failed' };
+        }
+
+        localStorage.setItem(SESSION_USER_KEY, JSON.stringify(backendUser));
+        setUser(backendUser);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error?.response?.data?.message || 'Invalid email or password',
+        };
+      }
+    }
+
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const users = loadUsers();
@@ -91,6 +158,30 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (name, email, password) => {
+    if (!LOCAL_MODE) {
+      try {
+        const response = await authAPI.register({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        });
+        const backendUser = response?.data?.user;
+
+        if (!backendUser) {
+          return { success: false, error: 'Registration failed' };
+        }
+
+        localStorage.setItem(SESSION_USER_KEY, JSON.stringify(backendUser));
+        setUser(backendUser);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error?.response?.data?.message || 'Registration failed',
+        };
+      }
+    }
+
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const users = loadUsers();
@@ -133,12 +224,44 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    if (!LOCAL_MODE) {
+      try {
+        await authAPI.logout();
+      } catch (_error) {
+        // Proceed with local cleanup even if backend logout fails.
+      }
+    }
     localStorage.removeItem('token');
     localStorage.removeItem(SESSION_USER_KEY);
     setUser(null);
   };
 
   const updateProfile = async ({ name, email }) => {
+    if (!LOCAL_MODE) {
+      try {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const normalizedName = String(name || '').trim();
+
+        const response = await authAPI.updateProfile({
+          name: normalizedName,
+          email: normalizedEmail,
+        });
+        const updatedUser = response?.data?.user;
+        if (!updatedUser) {
+          return { success: false, error: 'Could not update profile' };
+        }
+
+        localStorage.setItem(SESSION_USER_KEY, JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        return { success: true, user: updatedUser };
+      } catch (error) {
+        return {
+          success: false,
+          error: error?.response?.data?.message || 'Could not update profile',
+        };
+      }
+    }
+
     try {
       if (!user?.id) {
         return { success: false, error: 'No active user session' };

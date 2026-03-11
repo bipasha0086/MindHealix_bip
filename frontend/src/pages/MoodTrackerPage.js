@@ -5,6 +5,7 @@ import InteractiveMoodSelector from '../components/InteractiveMoodSelector';
 import VoiceInput from '../components/VoiceInput';
 import RealTimeSentiment from '../components/RealTimeSentiment';
 import AIDailyPrompts from '../components/AIDailyPrompts';
+import FaceStressCheck from '../components/FaceStressCheck';
 
 const MoodTrackerPage = () => {
   const [selectedMood, setSelectedMood] = useState('');
@@ -23,6 +24,7 @@ const MoodTrackerPage = () => {
   const [physicalActivity, setPhysicalActivity] = useState('None');
   const [socialInteraction, setSocialInteraction] = useState('Some');
   const [gratitude, setGratitude] = useState('');
+  const [faceStressPrediction, setFaceStressPrediction] = useState(null);
 
   const navigate = useNavigate();
 
@@ -47,6 +49,10 @@ const MoodTrackerPage = () => {
         physical_activity: physicalActivity,
         social_interaction: socialInteraction,
         gratitude: gratitude,
+        facial_stress_level: faceStressPrediction?.stress_level || null,
+        facial_stress_score: faceStressPrediction?.stress_score ?? null,
+        facial_stress_confidence: faceStressPrediction?.confidence ?? null,
+        facial_stress_source: faceStressPrediction?.prediction_source || null,
       });
 
       setResult(response.data.entry);
@@ -112,6 +118,18 @@ const MoodTrackerPage = () => {
               </div>
             </div>
 
+            {result.facial_stress_level && (
+              <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 mb-5">
+                <h3 className="font-semibold text-slate-900 mb-1">Facial Stress Signal</h3>
+                <p className="text-sm text-slate-700">
+                  Level: <span className="font-semibold">{result.facial_stress_level}</span>
+                  {typeof result.facial_stress_score === 'number' && (
+                    <span> | Score: <span className="font-semibold">{result.facial_stress_score}/100</span></span>
+                  )}
+                </p>
+              </div>
+            )}
+
             {result.prediction_source && (
               <div className="rounded-xl border border-slate-200 bg-white p-3 mb-5 text-sm text-slate-700">
                 Prediction Source: <span className="font-semibold">{result.prediction_source}</span>
@@ -159,6 +177,7 @@ const MoodTrackerPage = () => {
                   setSocialInteraction('Some');
                   setGratitude('');
                   setSleepHours(7);
+                  setFaceStressPrediction(null);
                 }}
                 className="flex-1 rounded-xl border border-slate-300 text-slate-700 py-2.5 font-semibold hover:bg-slate-50"
               >
@@ -367,6 +386,15 @@ const MoodTrackerPage = () => {
               <RealTimeSentiment text={journalText} />
             </div>
           )}
+
+          <div className="module-panel">
+            <FaceStressCheck onResult={setFaceStressPrediction} />
+            {faceStressPrediction && (
+              <div className="mt-3 text-xs text-slate-600">
+                Latest face signal will be included with this mood entry.
+              </div>
+            )}
+          </div>
 
           <button
             type="submit"

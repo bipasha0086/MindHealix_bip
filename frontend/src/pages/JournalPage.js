@@ -7,6 +7,8 @@ import AIDailyPrompts from '../components/AIDailyPrompts';
 const JournalPage = () => {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [useVoice, setUseVoice] = useState(false);
   const [selectedMood, setSelectedMood] = useState('Neutral');
@@ -26,6 +28,30 @@ const JournalPage = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveJournal = async () => {
+    if (!text.trim()) {
+      alert('Please write your journal before saving.');
+      return;
+    }
+
+    setSaving(true);
+    setSavedMessage('');
+    try {
+      await moodAPI.submitMood({
+        mood: selectedMood,
+        sleep_hours: 7,
+        journal_text: text,
+        date: new Date().toISOString().split('T')[0],
+      });
+      setSavedMessage('Journal entry saved to your mood records. Dashboard sync updated.');
+    } catch (error) {
+      alert('Failed to save journal entry. Please try again.');
+      console.error(error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -128,8 +154,21 @@ const JournalPage = () => {
                   >
                     {loading ? 'Analyzing...' : 'Analyze'}
                   </button>
+                  <button
+                    onClick={handleSaveJournal}
+                    disabled={saving || !text.trim()}
+                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {saving ? 'Saving...' : 'Save Journal Entry'}
+                  </button>
                 </div>
               </div>
+
+              {savedMessage && (
+                <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  {savedMessage}
+                </div>
+              )}
             </div>
 
             {text && text.length > 10 && (

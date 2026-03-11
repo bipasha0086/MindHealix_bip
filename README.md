@@ -177,7 +177,28 @@ cd backend
 python app.py
 ```
 
-The backend API will run on `http://localhost:5000`
+The backend API will run on `http://localhost:5001`
+
+### 8. One-Click Local Run
+
+On Windows, you can start both frontend and backend with the bundled script:
+
+```bat
+RUN_PROJECT_LOCAL.bat
+```
+
+This script:
+
+- starts the React frontend on `3000` if it is not already running
+- starts the Flask backend on `5001` using `backend\venv\Scripts\python.exe`
+- checks the backend health endpoint after startup
+- works with the current `frontend/.env` and `backend/.env` setup
+
+To stop the local servers, run:
+
+```bat
+STOP_PROJECT.bat
+```
 
 ## 📚 API Documentation
 
@@ -324,6 +345,39 @@ pytest tests/
 cd frontend
 npm test
 ```
+
+## 🖼️ Image-Based Stress Model Training (Optional)
+
+You can train an image classifier for stress levels (`low`, `medium`, `high`) using face images.
+
+1. Create dataset folders:
+
+```text
+dataset/stress_images/
+  low/
+  medium/
+  high/
+```
+
+2. Add labeled images to each class folder (recommended: at least 20+ per class).
+
+3. Install dependencies (if not already installed):
+
+```bash
+cd backend
+pip install tensorflow pillow
+```
+
+4. Run training:
+
+```bash
+cd ..
+python dataset/train_image_stress_model.py --data-dir dataset/stress_images
+```
+
+Outputs will be saved in `trained_models/`:
+- `image_stress_classifier.keras`
+- `image_stress_classifier_metadata.json`
 
 ## 🚀 Deployment
 

@@ -12,6 +12,7 @@ const MOTIVATION_QUOTES = [
 ];
 
 const LoginPage = () => {
+  const localMode = String(process.env.REACT_APP_LOCAL_MODE || 'true').toLowerCase() === 'true';
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -208,7 +209,9 @@ const LoginPage = () => {
             </form>
 
             <div className="mt-6 rounded-lg bg-cyan-50 border border-cyan-100 p-3 text-xs text-slate-700">
-              Local mode is enabled. Login/Register data is stored in your browser localStorage.
+              {localMode
+                ? 'Local mode is enabled. Login/Register data is stored in your browser localStorage.'
+                : 'MongoDB mode is enabled. Login/Register uses backend API and database.'}
             </div>
 
             <p className="text-center text-sm text-slate-600 mt-5">

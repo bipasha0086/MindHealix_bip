@@ -152,7 +152,7 @@ const DashboardPage = () => {
     );
   }
 
-  const { user, statistics, recent_entries } = dashboard || {};
+  const { user, statistics, recent_entries, latest_entry } = dashboard || {};
 
   const modules = [
     {
@@ -357,10 +357,10 @@ const DashboardPage = () => {
 
           <div className="space-y-6">
             <AIWellnessScore
-              moodData={recent_entries?.[0]?.mood}
-              stressLevel={statistics?.current_stress_level}
-              sleepHours={recent_entries?.[0]?.sleep_hours || 7}
-              journalActivity={Boolean(recent_entries && recent_entries.length)}
+              moodData={latest_entry?.mood || recent_entries?.[0]?.mood}
+              stressLevel={latest_entry?.stress_level || statistics?.current_stress_level}
+              sleepHours={Number(latest_entry?.sleep_hours ?? recent_entries?.[0]?.sleep_hours ?? 7)}
+              journalActivity={Boolean(latest_entry?.has_journal || recent_entries?.some((entry) => entry?.has_journal))}
             />
 
             <div className="module-panel border-rose-200">

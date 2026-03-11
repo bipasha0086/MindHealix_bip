@@ -57,6 +57,9 @@ class Config:
     # AI Model Settings
     MODEL_PATH = 'ai_model/trained_models/'
     MAX_TEXT_LENGTH = 5000
+    CHAT_PROVIDER = os.getenv('CHAT_PROVIDER', 'groq').lower()
+    GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+    GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
     GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
     CHAT_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv('CHAT_RATE_LIMIT_WINDOW_SECONDS', 60))

@@ -10,6 +10,7 @@ from pymongo import ASCENDING
 from config import Config
 from extensions import mongo, jwt
 from ai_model.stress_predictor import get_model_status
+from ai_model.face_stress_classifier import get_face_model_status
 
 
 # Initialize Flask app
@@ -90,6 +91,7 @@ def health_check():
             "status": "healthy",
             "database": db_status,
             "ai_model": get_model_status(),
+            "face_ai_model": get_face_model_status(),
         }
     ), 200
 
@@ -137,4 +139,4 @@ def missing_token_callback(_error):
 if __name__ == "__main__":
     print("Starting AI Mental Health Support Platform backend...")
     print(f"Server: http://localhost:{Config.PORT}")
-    app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
+    app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG, use_reloader=False)

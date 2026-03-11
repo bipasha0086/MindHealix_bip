@@ -269,7 +269,8 @@ def generate_sample_dataset(n_samples=1000):
         mood = np.random.choice(moods)
         mood_value = mood_stress[mood]
         
-        # Generate sentiment score correlated with mood
+        # Gener
+        # ate sentiment score correlated with mood
         if mood in ['Happy', 'Excited']:
             sentiment = np.random.uniform(0.3, 1.0)
         elif mood in ['Sad', 'Stressed', 'Anxious']:

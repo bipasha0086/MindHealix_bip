@@ -22,6 +22,7 @@ torch==2.0.1
 # Data Processing
 pandas==2.0.3
 numpy==1.24.3
+opencv-python==4.10.0.84
 
 # Additional Dependencies
 gunicorn==21.2.0

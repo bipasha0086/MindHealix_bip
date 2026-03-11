@@ -65,6 +65,7 @@ const InteractiveMoodSelector = ({ onMoodSelect, selectedMood }) => {
           return (
             <button
               key={mood.name}
+              type="button"
               onClick={() => handleMoodClick(mood)}
               onMouseEnter={() => setHoveredMood(mood.name)}
               onMouseLeave={() => setHoveredMood(null)}

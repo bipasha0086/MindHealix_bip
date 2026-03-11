@@ -32,8 +32,8 @@ const RegisterPage = () => {
 
     if (!formData.password) {
       nextErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      nextErrors.password = 'Password must be at least 6 characters';
+    } else if (formData.password.length < 8) {
+      nextErrors.password = 'Password must be at least 8 characters';
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
       nextErrors.password = 'Use uppercase, lowercase, and a number';
     }
@@ -179,7 +179,7 @@ const RegisterPage = () => {
                       ? 'border-rose-300 focus:ring-2 focus:ring-rose-200'
                       : 'border-slate-300 focus:ring-2 focus:ring-cyan-200 focus:border-cyan-400'
                   }`}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                 />
                 {errors.password && <p className="text-rose-600 text-xs mt-1">{errors.password}</p>}
               </div>

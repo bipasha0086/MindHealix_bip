@@ -7,41 +7,6 @@ const DEFAULT_SAMPLE = {
   journal_text: 'Today was balanced and manageable.',
 };
 
-const SCENARIOS = [
-  {
-    label: 'Exam Pressure',
-    sample: {
-      mood: 'Anxious',
-      sleep_hours: 4.5,
-      journal_text: 'I am worried about exams and cannot focus properly.',
-    },
-  },
-  {
-    label: 'Recovery Day',
-    sample: {
-      mood: 'Happy',
-      sleep_hours: 8,
-      journal_text: 'I exercised, relaxed, and felt calm most of the day.',
-    },
-  },
-  {
-    label: 'Work Overload',
-    sample: {
-      mood: 'Stressed',
-      sleep_hours: 5,
-      journal_text: 'Too many deadlines, feeling overwhelmed and mentally drained.',
-    },
-  },
-  {
-    label: 'Social Boost',
-    sample: {
-      mood: 'Excited',
-      sleep_hours: 7.5,
-      journal_text: 'Spent quality time with friends and felt energized.',
-    },
-  },
-];
-
 const MOODS = ['Happy', 'Neutral', 'Sad', 'Stressed', 'Anxious', 'Excited'];
 
 const MLModelPage = () => {
@@ -97,15 +62,8 @@ const MLModelPage = () => {
     }
   };
 
-  const applyScenario = (scenario) => {
-    setSample(scenario.sample);
-    setGuess('');
-    setGuessResult('');
-  };
-
-  const randomScenario = () => {
-    const pick = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
-    applyScenario(pick);
+  const updateSample = (patch) => {
+    setSample((prev) => ({ ...prev, ...patch }));
   };
 
   const checkGuess = () => {
@@ -115,7 +73,6 @@ const MLModelPage = () => {
 
   useEffect(() => {
     fetchHealth();
-    runSamplePrediction();
   }, []);
 
   return (
@@ -148,26 +105,9 @@ const MLModelPage = () => {
             <div className="module-panel">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <h2 className="text-xl font-black text-slate-900">Scenario Deck</h2>
-                <button
-                  type="button"
-                  onClick={randomScenario}
-                  className="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-800 hover:bg-cyan-100"
-                >
-                  Random
-                </button>
-              </div>
-
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-                {SCENARIOS.map((scenario) => (
-                  <button
-                    key={scenario.label}
-                    type="button"
-                    onClick={() => applyScenario(scenario)}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    {scenario.label}
-                  </button>
-                ))}
+                <span className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                  Manual input only
+                </span>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
@@ -175,7 +115,7 @@ const MLModelPage = () => {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Mood</label>
                   <select
                     value={sample.mood}
-                    onChange={(e) => setSample((prev) => ({ ...prev, mood: e.target.value }))}
+                    onChange={(e) => updateSample({ mood: e.target.value })}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   >
                     {MOODS.map((m) => (
@@ -193,7 +133,7 @@ const MLModelPage = () => {
                     max="12"
                     step="0.5"
                     value={sample.sleep_hours}
-                    onChange={(e) => setSample((prev) => ({ ...prev, sleep_hours: Number(e.target.value) }))}
+                    onChange={(e) => updateSample({ sleep_hours: Number(e.target.value) })}
                     className="w-full accent-sky-600"
                   />
                 </div>
@@ -204,7 +144,7 @@ const MLModelPage = () => {
                 <textarea
                   rows="3"
                   value={sample.journal_text}
-                  onChange={(e) => setSample((prev) => ({ ...prev, journal_text: e.target.value }))}
+                  onChange={(e) => updateSample({ journal_text: e.target.value })}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
               </div>
