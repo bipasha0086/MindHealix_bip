@@ -1,0 +1,228 @@
+# API Testing Guide
+
+## Using this file with popular API clients:
+## - Postman: Import this file
+## - VS Code REST Client: Install REST Client extension
+## - Insomnia: Import this file
+
+### Variables
+@baseUrl = http://localhost:5000/api
+@token = YOUR_TOKEN_HERE
+
+### Health Check
+GET http://localhost:5000/health
+
+---
+
+### 1. Register User
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+---
+
+### 2. Login
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+# Copy the access_token from response and update @token variable above
+
+---
+
+### 3. Get User Profile
+GET {{baseUrl}}/profile
+Authorization: Bearer {{token}}
+
+---
+
+### 4. Submit Mood Entry
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "Happy",
+  "sleep_hours": 7.5,
+  "journal_text": "Had a great day today! Feeling productive and energized.",
+  "date": "2026-03-09"
+}
+
+---
+
+### 5. Submit Mood Entry with Negative Sentiment
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "Stressed",
+  "sleep_hours": 5,
+  "journal_text": "Feeling overwhelmed with work. Too many deadlines and not enough time.",
+  "date": "2026-03-08"
+}
+
+---
+
+### 6. Analyze Text Only
+POST {{baseUrl}}/analyze-text
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "text": "I'm feeling anxious about the upcoming presentation. My mind keeps racing and I can't focus."
+}
+
+---
+
+### 7. Get User Dashboard
+GET {{baseUrl}}/user-dashboard
+Authorization: Bearer {{token}}
+
+---
+
+### 8. Get Mood History (Last 7 Days)
+GET {{baseUrl}}/mood-history?days=7
+Authorization: Bearer {{token}}
+
+---
+
+### 9. Get Mood History (Last 30 Days)
+GET {{baseUrl}}/mood-history?days=30
+Authorization: Bearer {{token}}
+
+---
+
+### 10. Get Stress Trends
+GET {{baseUrl}}/stress-trends
+Authorization: Bearer {{token}}
+
+---
+
+### 11. Get Mood Categories
+GET {{baseUrl}}/mood-categories
+
+---
+
+## Sample Test Scenarios
+
+### Test Case 1: Happy User with Good Sleep
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "Happy",
+  "sleep_hours": 8,
+  "journal_text": "Woke up refreshed and excited for the day ahead!",
+  "date": "2026-03-09"
+}
+
+# Expected: Low stress level, positive sentiment
+
+---
+
+### Test Case 2: Anxious User with Poor Sleep
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "Anxious",
+  "sleep_hours": 4,
+  "journal_text": "Couldn't sleep well. Worried about everything. Feeling overwhelmed.",
+  "date": "2026-03-08"
+}
+
+# Expected: High stress level, negative sentiment, recommendations
+
+---
+
+### Test Case 3: Neutral User
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "Neutral",
+  "sleep_hours": 7,
+  "journal_text": "Just a regular day, nothing special happened.",
+  "date": "2026-03-07"
+}
+
+# Expected: Medium stress level, neutral sentiment
+
+---
+
+### Test Case 4: Multiple Entries for Analytics
+# Submit multiple mood entries with different dates to test analytics
+
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "Excited",
+  "sleep_hours": 8,
+  "journal_text": "Got promoted today! So happy and excited!",
+  "date": "2026-03-06"
+}
+
+---
+
+## Error Test Cases
+
+### Invalid Login
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "wrong@email.com",
+  "password": "wrongpassword"
+}
+
+# Expected: 401 Unauthorized
+
+---
+
+### Missing Token
+GET {{baseUrl}}/user-dashboard
+
+# Expected: 401 Missing token
+
+---
+
+### Invalid Mood
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "InvalidMood",
+  "sleep_hours": 7
+}
+
+# Expected: 400 Validation Error
+
+---
+
+### Invalid Sleep Hours
+POST {{baseUrl}}/submit-mood
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mood": "Happy",
+  "sleep_hours": 25
+}
+
+# Expected: 400 Validation Error
