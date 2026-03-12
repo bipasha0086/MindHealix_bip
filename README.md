@@ -268,6 +268,36 @@ GET /api/mood-history?days=7
 Authorization: Bearer <token>
 ```
 
+## 🛡️ YouTube Wellness Guard Extension
+
+This project includes a browser extension in `youtube_wellness_extension/` that analyzes YouTube content while your backend is running.
+
+### New backend endpoints
+
+- `POST /api/youtube/analyze-content`: Analyzes YouTube metadata and returns risk level + safer alternatives.
+- `GET /api/youtube/activity-summary`: Returns recent analyzed user activity for monitoring.
+- `GET /api/youtube/profile`: Returns current user's saved YouTube guard profile.
+- `PUT /api/youtube/profile`: Updates strict mode, allow-list channels, and custom blocked topics.
+- `POST /api/youtube/notify-threshold`: Sends Twilio alert when warning threshold is exceeded.
+
+### Quick setup
+
+1. Start backend (`python app.py` in `backend/`).
+2. In backend `.env`, set:
+  - `CORS_ORIGINS=http://localhost:3000,https://www.youtube.com`
+  - `YT_SEMANTIC_PROVIDER=auto` (optional, uses Gemini/Groq for deeper semantic risk scoring)
+3. In Chrome, load `youtube_wellness_extension/` as an unpacked extension.
+
+When potentially harmful depression/anxiety-heavy content is detected, the extension displays a warning panel with alternatives and a `Continue Anyway` bypass option.
+
+### Frontend admin and rules management
+
+- Visit `/youtube-guard-admin` after login to:
+  - visualize risk distribution and timeline charts
+  - view top watched channels
+  - configure user-level guard rules
+- You can also manage the same rules from the Profile page section **YouTube Guard Rules**.
+
 ## 🤖 AI Model Details
 
 ### Sentiment Analysis

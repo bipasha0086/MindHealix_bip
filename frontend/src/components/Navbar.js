@@ -14,6 +14,7 @@ const NAV_ICON = {
   Assessment: '🧠',
   'Panic Mode': '🆘',
   Emergency: '🚨',
+  'YT Guard': '🛡️',
   Login: '🔐',
   Register: '✨',
 };
@@ -84,6 +85,7 @@ const Navbar = () => {
         { path: '/assessment', label: 'Assessment' },
         { path: '/panic-mode', label: 'Panic Mode' },
         { path: '/emergency-support', label: 'Emergency' },
+        { path: '/youtube-guard-admin', label: 'YT Guard' },
       ]
     : [];
 

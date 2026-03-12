@@ -19,9 +19,16 @@ def _append_mongo_timeout_params(uri, connect_timeout_ms, select_timeout_ms):
         result = f"{result}{separator}serverSelectionTimeoutMS={select_timeout_ms}"
     return result
 
+
+def _parse_cors_origins(raw_origins):
+    if not raw_origins:
+        return ['http://localhost:3000']
+    origins = [origin.strip() for origin in str(raw_origins).split(',') if origin.strip()]
+    return origins or ['http://localhost:3000']
+
 class Config:
     """Base configuration class"""
-    
+
     # Flask Settings
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('FLASK_ENV', 'development') == 'development'
@@ -46,10 +53,12 @@ class Config:
         MONGO_CONNECT_TIMEOUT_MS,
         MONGO_SERVER_SELECTION_TIMEOUT_MS,
     )
-    
+
     # CORS Settings
-    CORS_ORIGINS = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-    
+    CORS_ORIGINS = _parse_cors_origins(
+        os.getenv('CORS_ORIGINS', os.getenv('FRONTEND_URL', 'http://localhost:3000'))
+    )
+
     # Server Settings
     PORT = int(os.getenv('PORT', 5000))
     HOST = '0.0.0.0'
@@ -76,6 +85,18 @@ class Config:
     CHAT_RATE_LIMIT_MAX_REQUESTS = int(os.getenv('CHAT_RATE_LIMIT_MAX_REQUESTS', 12))
     CHAT_CACHE_TTL_SECONDS = int(os.getenv('CHAT_CACHE_TTL_SECONDS', 45))
     CHAT_CACHE_MAX_ITEMS = int(os.getenv('CHAT_CACHE_MAX_ITEMS', 300))
+    YT_SEMANTIC_PROVIDER = os.getenv('YT_SEMANTIC_PROVIDER', 'off').lower()
+    YT_GROQ_MODEL = os.getenv('YT_GROQ_MODEL', GROQ_MODEL)
+    YT_GEMINI_MODEL = os.getenv('YT_GEMINI_MODEL', GEMINI_MODEL)
+    TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', os.getenv('TWILIO_SID', ''))
+    TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
+    TWILIO_ALERT_TO = os.getenv('TWILIO_ALERT_TO', os.getenv('TWILIO_TO', ''))
+    TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
+    TWILIO_ALERT_CHANNELS = os.getenv('TWILIO_ALERT_CHANNELS', 'whatsapp')
+    TWILIO_DEFAULT_COUNTRY_CODE = os.getenv('TWILIO_DEFAULT_COUNTRY_CODE', '+91')
+    TWILIO_SMS_FROM = os.getenv('TWILIO_SMS_FROM', '')
+    TWILIO_CALL_FROM = os.getenv('TWILIO_CALL_FROM', '')
+    TWILIO_CALL_ENABLED = os.getenv('TWILIO_CALL_ENABLED', 'false').lower() == 'true'
     
     # Application Settings
     MOOD_CATEGORIES = ['Happy', 'Neutral', 'Sad', 'Stressed', 'Anxious', 'Excited']

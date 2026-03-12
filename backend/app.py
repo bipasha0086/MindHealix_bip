@@ -48,6 +48,7 @@ from routes.mood import mood_bp  # noqa: E402
 from routes.analytics import analytics_bp  # noqa: E402
 from routes.chatbot import chatbot_bp  # noqa: E402
 from routes.emergency import emergency_bp  # noqa: E402
+from routes.youtube_guard import youtube_guard_bp  # noqa: E402
 
 # Register API blueprints
 app.register_blueprint(auth_bp, url_prefix="/api")
@@ -55,6 +56,7 @@ app.register_blueprint(mood_bp, url_prefix="/api")
 app.register_blueprint(analytics_bp, url_prefix="/api")
 app.register_blueprint(chatbot_bp, url_prefix="/api")
 app.register_blueprint(emergency_bp, url_prefix="/api")
+app.register_blueprint(youtube_guard_bp, url_prefix="/api")
 
 
 @app.route("/")
@@ -72,6 +74,7 @@ def index():
                 "analytics": "/api/user-dashboard, /api/mood-history, /api/stress-trends",
                 "chat": "/api/chat-assistant",
                 "emergency": "/api/emergency-contact, /api/emergency-alerts",
+                "youtube_guard": "/api/youtube/analyze-content, /api/youtube/activity-summary, /api/youtube/profile, /api/youtube/notify-threshold, /api/youtube/warning-events",
             },
         }
     ), 200

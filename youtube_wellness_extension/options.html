@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindHealix Guard Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <h1>MindHealix YouTube Guard Settings</h1>
+        <p class="subtitle">Configure backend URL and user-level guard rules.</p>
+
+        <label>Backend API URL</label>
+        <input id="backendUrl" type="text" placeholder="http://localhost:5001/api/youtube/analyze-content" />
+
+        <label class="switch-row">
+          <span>Strict mode</span>
+          <input id="strictMode" type="checkbox" />
+        </label>
+
+        <label>Warning limit before block</label>
+        <input id="warningLimit" type="number" min="4" max="10" step="1" placeholder="4" />
+
+        <label>Allow-list channels (comma separated)</label>
+        <textarea id="allowList" rows="3" placeholder="Channel One, Channel Two"></textarea>
+
+        <label>Blocked topics (comma separated)</label>
+        <textarea id="blockedTopics" rows="3" placeholder="doom content, self-harm challenge"></textarea>
+
+        <label>Custom block keywords (comma separated)</label>
+        <textarea id="customKeywords" rows="3" placeholder="hopeless, no reason to live"></textarea>
+
+        <label>Emergency contact phone (with country code)</label>
+        <input id="emergencyAlertTo" type="text" placeholder="+919876543210" />
+
+        <label>Optional user id (backend profile linking)</label>
+        <input id="userId" type="text" placeholder="Mongo user id" />
+
+        <div class="button-row">
+          <button id="saveBtn">Save Settings</button>
+          <button id="resetWarningsBtn" class="secondary">Reset Warning Counts</button>
+        </div>
+        <p id="status"></p>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

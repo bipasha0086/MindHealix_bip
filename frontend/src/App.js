@@ -15,6 +15,7 @@ import PanicModePage from './pages/PanicModePage';
 import AssessmentPage from './pages/AssessmentPage';
 import MLModelPage from './pages/MLModelPage';
 import ProfilePage from './pages/ProfilePage';
+import YouTubeGuardAdminPage from './pages/YouTubeGuardAdminPage';
 
 // Components
 import Navbar from './components/Navbar';
@@ -118,6 +119,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/youtube-guard-admin"
+              element={
+                <ProtectedRoute>
+                  <YouTubeGuardAdminPage />
                 </ProtectedRoute>
               }
             />

@@ -1,0 +1,96 @@
+body {
+  margin: 0;
+  background: linear-gradient(160deg, #f0f9ff, #ecfeff);
+  color: #0f172a;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.panel {
+  width: min(760px, 100%);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  padding: 22px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.subtitle {
+  margin: 0 0 14px;
+  color: #475569;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+input[type="text"],
+textarea {
+  width: 100%;
+  border: 1px solid #94a3b8;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+button {
+  margin-top: 14px;
+  border: 0;
+  background: #0284c7;
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0369a1;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+button.secondary {
+  background: #334155;
+}
+
+button.secondary:hover {
+  background: #1e293b;
+}
+
+#status {
+  min-height: 18px;
+  font-size: 13px;
+  margin-top: 10px;
+  color: #0f766e;
+}

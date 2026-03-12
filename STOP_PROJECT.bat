@@ -8,7 +8,6 @@ call :kill_port 5001
 call :kill_port 5000
 
 echo Done.
-pause
 endlocal
 goto :eof
 

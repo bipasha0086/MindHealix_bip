@@ -10,6 +10,8 @@ const ENTRIES_KEY = 'wellnesshub_mood_entries';
 const SESSION_USER_KEY = 'user';
 const CONTACT_KEY_PREFIX = 'wellnesshub_emergency_contact_';
 const ALERTS_KEY_PREFIX = 'wellnesshub_emergency_alerts_';
+const YT_GUARD_PROFILE_KEY_PREFIX = 'wellnesshub_youtube_guard_profile_';
+const YT_GUARD_ACTIVITY_KEY = 'wellnesshub_youtube_guard_activity';
 
 const responseOf = (data) => Promise.resolve({ data });
 
@@ -38,6 +40,7 @@ const saveEntries = (entries) => {
 
 const getEmergencyContactKey = (userId) => `${CONTACT_KEY_PREFIX}${userId || 'local-user'}`;
 const getEmergencyAlertsKey = (userId) => `${ALERTS_KEY_PREFIX}${userId || 'local-user'}`;
+const getYoutubeGuardProfileKey = (userId) => `${YT_GUARD_PROFILE_KEY_PREFIX}${userId || 'local-user'}`;
 
 const getEmergencyContactLocal = (userId) => {
   try {
@@ -64,6 +67,46 @@ const getEmergencyAlertsLocal = (userId) => {
 
 const saveEmergencyAlertsLocal = (userId, alerts) => {
   localStorage.setItem(getEmergencyAlertsKey(userId), JSON.stringify(alerts));
+};
+
+const getYoutubeGuardProfileLocal = (userId) => {
+  try {
+    const raw = localStorage.getItem(getYoutubeGuardProfileKey(userId));
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object'
+      ? parsed
+      : {
+          strict_mode: false,
+          allow_list_channels: [],
+          blocked_topics: [],
+          custom_block_keywords: [],
+        };
+  } catch (_error) {
+    return {
+      strict_mode: false,
+      allow_list_channels: [],
+      blocked_topics: [],
+      custom_block_keywords: [],
+    };
+  }
+};
+
+const saveYoutubeGuardProfileLocal = (userId, profile) => {
+  localStorage.setItem(getYoutubeGuardProfileKey(userId), JSON.stringify(profile));
+};
+
+const getYoutubeGuardActivityLocal = () => {
+  try {
+    const raw = localStorage.getItem(YT_GUARD_ACTIVITY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+};
+
+const saveYoutubeGuardActivityLocal = (items) => {
+  localStorage.setItem(YT_GUARD_ACTIVITY_KEY, JSON.stringify(items));
 };
 
 const toDateOnly = (input) => {
@@ -499,6 +542,114 @@ export const systemAPI = {
         },
       })
     );
+  },
+};
+
+export const youtubeGuardAPI = {
+  analyzeContent: async (payload) => {
+    if (!LOCAL_MODE) return api.post('/youtube/analyze-content', payload);
+
+    const text = `${payload?.title || ''} ${payload?.description || ''}`.toLowerCase();
+    const roughScore = [
+      text.includes('depression') ? 20 : 0,
+      text.includes('anxiety') ? 16 : 0,
+      text.includes('panic') ? 14 : 0,
+      text.includes('suicide') ? 35 : 0,
+      text.includes('hopeless') ? 12 : 0,
+    ].reduce((a, b) => a + b, 0);
+
+    const risk_score = Math.min(100, roughScore);
+    const risk_level = risk_score >= 70 ? 'high' : risk_score >= 40 ? 'medium' : 'low';
+    const action = risk_level === 'high' ? 'warn_strong' : risk_level === 'medium' ? 'warn' : 'allow';
+
+    const response = {
+      risk_score,
+      risk_level,
+      action,
+      bypass_allowed: true,
+      message:
+        risk_level === 'low'
+          ? 'This content looks okay from a wellness-risk perspective.'
+          : 'This video may intensify low mood or anxiety. Consider a short break first.',
+      detected_signals: [],
+      alternatives: [
+        'Try a 5-minute breathing reset before continuing.',
+        'Switch to uplifting or educational content for a while.',
+        'Take a short walk and hydrate.',
+      ],
+      sentiment: analyzeSentimentLocal(text).sentiment,
+      semantic: null,
+    };
+
+    const existing = getYoutubeGuardActivityLocal();
+    const item = {
+      video_id: payload?.video_id || '',
+      page_url: payload?.page_url || '',
+      title: payload?.title || '',
+      channel: payload?.channel || '',
+      risk_level,
+      risk_score,
+      action,
+      created_at: new Date().toISOString(),
+      signals: response.detected_signals,
+      semantic: response.semantic,
+    };
+
+    saveYoutubeGuardActivityLocal([item, ...existing].slice(0, 150));
+    return responseOf(response);
+  },
+  getActivitySummary: (limit = 25) => {
+    if (!LOCAL_MODE) return api.get(`/youtube/activity-summary?limit=${limit}`);
+
+    const items = getYoutubeGuardActivityLocal().slice(0, Number(limit));
+    const summary = {
+      total: items.length,
+      high_risk: items.filter((i) => i.risk_level === 'high').length,
+      medium_risk: items.filter((i) => i.risk_level === 'medium').length,
+      low_risk: items.filter((i) => i.risk_level === 'low').length,
+      top_channels: Object.entries(
+        items.reduce((acc, item) => {
+          const key = item.channel || 'Unknown';
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {})
+      )
+        .map(([channel, count]) => ({ channel, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8),
+      timeline: Object.entries(
+        items.reduce((acc, item) => {
+          const d = toDateOnly(item.created_at || new Date().toISOString());
+          acc[d] = (acc[d] || 0) + 1;
+          return acc;
+        }, {})
+      )
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, count]) => ({ date, count })),
+    };
+
+    return responseOf({ items, summary });
+  },
+  getProfile: () => {
+    if (!LOCAL_MODE) return api.get('/youtube/profile');
+    const user = getSessionUser();
+    return responseOf({ profile: getYoutubeGuardProfileLocal(user?.id || 'local-user') });
+  },
+  updateProfile: (profile) => {
+    if (!LOCAL_MODE) return api.put('/youtube/profile', profile);
+    const user = getSessionUser();
+    const normalized = {
+      strict_mode: Boolean(profile?.strict_mode),
+      allow_list_channels: Array.isArray(profile?.allow_list_channels) ? profile.allow_list_channels : [],
+      blocked_topics: Array.isArray(profile?.blocked_topics) ? profile.blocked_topics : [],
+      custom_block_keywords: Array.isArray(profile?.custom_block_keywords) ? profile.custom_block_keywords : [],
+    };
+    saveYoutubeGuardProfileLocal(user?.id || 'local-user', normalized);
+    return responseOf({ message: 'YouTube guard profile updated', profile: normalized });
+  },
+  getWarningEvents: (limit = 100) => {
+    if (!LOCAL_MODE) return api.get(`/youtube/warning-events?limit=${limit}`);
+    return responseOf({ events: [], total: 0 });
   },
 };
 

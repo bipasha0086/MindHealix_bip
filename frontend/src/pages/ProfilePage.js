@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { analyticsAPI, emergencyAPI } from '../services/api';
+import { analyticsAPI, emergencyAPI, youtubeGuardAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+
+const parseList = (raw) =>
+  String(raw || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 const ProfilePage = () => {
   const { user, updateProfile } = useAuth();
@@ -15,6 +21,17 @@ const ProfilePage = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [ytProfile, setYtProfile] = useState({
+    strict_mode: false,
+    allow_list_channels: [],
+    blocked_topics: [],
+    custom_block_keywords: [],
+  });
+  const [ytAllowListInput, setYtAllowListInput] = useState('');
+  const [ytBlockedTopicsInput, setYtBlockedTopicsInput] = useState('');
+  const [ytKeywordsInput, setYtKeywordsInput] = useState('');
+  const [ytSaving, setYtSaving] = useState(false);
+  const [ytSaved, setYtSaved] = useState(false);
 
   const loadProfile = async () => {
     setLoading(true);
@@ -24,6 +41,8 @@ const ProfilePage = () => {
         emergencyAPI.getEmergencyContact(),
         emergencyAPI.getEmergencyAlerts(5),
       ]);
+
+      const ytProfileRes = await youtubeGuardAPI.getProfile();
 
       setProfile(dashboardRes?.data?.user || null);
       setStats(dashboardRes?.data?.statistics || null);
@@ -36,6 +55,18 @@ const ProfilePage = () => {
       });
 
       setAlerts(alertsRes?.data?.alerts || []);
+
+      const loadedYtProfile = ytProfileRes?.data?.profile || {
+        strict_mode: false,
+        allow_list_channels: [],
+        blocked_topics: [],
+        custom_block_keywords: [],
+      };
+
+      setYtProfile(loadedYtProfile);
+      setYtAllowListInput((loadedYtProfile.allow_list_channels || []).join(', '));
+      setYtBlockedTopicsInput((loadedYtProfile.blocked_topics || []).join(', '));
+      setYtKeywordsInput((loadedYtProfile.custom_block_keywords || []).join(', '));
     } catch (error) {
       console.error('Failed to load profile data:', error);
     } finally {
@@ -87,6 +118,30 @@ const ProfilePage = () => {
       console.error('Failed to save emergency contact:', error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveYouTubeGuardProfile = async () => {
+    setYtSaving(true);
+    setYtSaved(false);
+
+    const payload = {
+      strict_mode: Boolean(ytProfile.strict_mode),
+      allow_list_channels: parseList(ytAllowListInput),
+      blocked_topics: parseList(ytBlockedTopicsInput),
+      custom_block_keywords: parseList(ytKeywordsInput),
+    };
+
+    try {
+      const response = await youtubeGuardAPI.updateProfile(payload);
+      const persisted = response?.data?.profile || payload;
+      setYtProfile(persisted);
+      setYtSaved(true);
+      setTimeout(() => setYtSaved(false), 1800);
+    } catch (error) {
+      console.error('Failed to save YouTube guard profile:', error);
+    } finally {
+      setYtSaving(false);
     }
   };
 
@@ -242,6 +297,71 @@ const ProfilePage = () => {
             ) : (
               <p className="text-sm text-slate-600">No recent alerts.</p>
             )}
+          </div>
+        </div>
+
+        <div className="module-panel mt-6">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">YouTube Guard Rules</h2>
+          <p className="text-sm text-slate-600 mb-4">
+            Configure user-level filtering rules used by the YouTube wellness guard analyzer.
+          </p>
+          <div className="grid lg:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <label className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="text-sm font-semibold text-slate-800">Strict Mode</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(ytProfile.strict_mode)}
+                  onChange={(e) => setYtProfile((prev) => ({ ...prev, strict_mode: e.target.checked }))}
+                  className="h-4 w-4"
+                />
+              </label>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Allow-list Channels</label>
+                <textarea
+                  value={ytAllowListInput}
+                  onChange={(e) => setYtAllowListInput(e.target.value)}
+                  rows={3}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-100"
+                  placeholder="Channel One, Channel Two"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Blocked Topics</label>
+                <textarea
+                  value={ytBlockedTopicsInput}
+                  onChange={(e) => setYtBlockedTopicsInput(e.target.value)}
+                  rows={3}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-100"
+                  placeholder="doom content, self-harm trends"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Custom Keywords</label>
+                <textarea
+                  value={ytKeywordsInput}
+                  onChange={(e) => setYtKeywordsInput(e.target.value)}
+                  rows={3}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-100"
+                  placeholder="hopeless, no reason to live"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={saveYouTubeGuardProfile}
+              className="rounded-lg bg-cyan-600 text-white px-4 py-2 text-sm font-bold hover:bg-cyan-700"
+            >
+              {ytSaving ? 'Saving Rules...' : 'Save YouTube Rules'}
+            </button>
+            {ytSaved && <p className="text-xs text-emerald-700 font-semibold">Rules saved successfully</p>}
           </div>
         </div>
       </div>

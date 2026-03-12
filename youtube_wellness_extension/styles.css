@@ -1,0 +1,136 @@
+#mindhealix-youtube-guard {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  z-index: 999999;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  border-radius: 14px;
+  padding: 14px;
+  color: #0f172a;
+  box-shadow: 0 10px 26px rgba(2, 8, 23, 0.3);
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  background: linear-gradient(140deg, #f8fafc, #e2e8f0);
+}
+
+#mindhealix-youtube-guard .mhx-header {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+#mindhealix-youtube-guard .mhx-status {
+  font-size: 12px;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+#mindhealix-youtube-guard .mhx-message {
+  font-size: 13px;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+
+#mindhealix-youtube-guard .mhx-list {
+  margin: 0 0 8px 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+#mindhealix-youtube-guard .mhx-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#mindhealix-youtube-guard .mhx-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+#mindhealix-youtube-guard .mhx-btn:hover {
+  opacity: 0.92;
+}
+
+#mindhealix-youtube-guard .mhx-btn-muted {
+  background: #334155;
+}
+
+#mindhealix-youtube-guard.mhx-low {
+  background: linear-gradient(140deg, #ecfccb, #bbf7d0);
+}
+
+#mindhealix-youtube-guard.mhx-medium {
+  background: linear-gradient(140deg, #fef9c3, #fde68a);
+}
+
+#mindhealix-youtube-guard.mhx-high {
+  background: linear-gradient(140deg, #fee2e2, #fecaca);
+}
+
+#mindhealix-youtube-guard.mhx-hidden {
+  display: none;
+}
+
+#mindhealix-youtube-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 1000000;
+  background: rgba(2, 6, 23, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#mindhealix-youtube-blocker .mhx-blocker-card {
+  width: min(520px, 100%);
+  border-radius: 16px;
+  padding: 22px;
+  background: linear-gradient(150deg, #fff1f2, #fee2e2);
+  border: 1px solid #fca5a5;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.45);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #111827;
+}
+
+#mindhealix-youtube-blocker h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+#mindhealix-youtube-blocker .mhx-blocker-line {
+  margin: 7px 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+#mindhealix-youtube-blocker .mhx-blocker-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#mindhealix-youtube-blocker button {
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+#mindhealix-youtube-blocker button.mhx-secondary {
+  background: #334155;
+}
