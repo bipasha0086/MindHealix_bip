@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import BrandMark from '../components/BrandMark';
+import PageContainer from '../components/layout/PageContainer';
 
 const HomePage = () => {
   const { user } = useAuth();
@@ -30,12 +32,17 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+      <section className="py-14 lg:py-20">
+        <PageContainer>
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <div className="animate-rise">
-            <div className="inline-flex items-center gap-2 rounded-full bg-cyan-100 text-cyan-800 text-sm font-semibold px-4 py-2 mb-5">
-              <span>✨</span>
-              <span>MindHealix • AI-Powered Emotional Support System</span>
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-cyan-100 text-cyan-800 text-sm font-semibold px-4 py-2 mb-5">
+              <BrandMark
+                linkTo={null}
+                iconClassName="w-8 h-8"
+                textClassName="text-cyan-900 font-bold text-sm"
+              />
+              <span className="text-cyan-700">AI-Powered Emotional Support System</span>
             </div>
             <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 leading-tight tracking-tight">
               Your Daily Space
@@ -102,9 +109,11 @@ const HomePage = () => {
             </div>
           </div>
         </div>
+        </PageContainer>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <section className="pb-16">
+        <PageContainer>
         <h2 className="text-3xl font-bold text-slate-900 text-center mb-2">Everything You Need</h2>
         <p className="text-slate-600 text-center mb-8">Core modules for reflection, analysis, and emotional awareness.</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -116,6 +125,7 @@ const HomePage = () => {
             </div>
           ))}
         </div>
+        </PageContainer>
       </section>
     </div>
   );

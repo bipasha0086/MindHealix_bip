@@ -148,21 +148,21 @@ const AnalyticsPage = () => {
 
         {aiInsights && (
           <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 mb-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-2">AI Insight Summary</h2>
-            <div className="grid md:grid-cols-4 gap-3 text-sm">
-              <div className="rounded-xl bg-white border border-slate-200 p-3">
+            <h2 className="module-section-title-tight">AI Insight Summary</h2>
+            <div className="grid md:grid-cols-4 gap-3 text-sm items-stretch">
+              <div className="rounded-xl bg-white border border-slate-200 p-3 h-full flex flex-col justify-between">
                 <div className="text-slate-500">Trend</div>
                 <div className="font-semibold text-slate-900 capitalize">{aiInsights.trend}</div>
               </div>
-              <div className="rounded-xl bg-white border border-slate-200 p-3">
+              <div className="rounded-xl bg-white border border-slate-200 p-3 h-full flex flex-col justify-between">
                 <div className="text-slate-500">Avg Stress Score</div>
                 <div className="font-semibold text-slate-900">{aiInsights.avgStressScore}/100</div>
               </div>
-              <div className="rounded-xl bg-white border border-slate-200 p-3">
+              <div className="rounded-xl bg-white border border-slate-200 p-3 h-full flex flex-col justify-between">
                 <div className="text-slate-500">High Stress %</div>
                 <div className="font-semibold text-slate-900">{aiInsights.highStressPercentage}%</div>
               </div>
-              <div className="rounded-xl bg-white border border-slate-200 p-3">
+              <div className="rounded-xl bg-white border border-slate-200 p-3 h-full flex flex-col justify-between">
                 <div className="text-slate-500">Entries</div>
                 <div className="font-semibold text-slate-900">{aiInsights.totalEntries}</div>
               </div>
@@ -170,16 +170,16 @@ const AnalyticsPage = () => {
           </div>
         )}
 
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <div className="module-panel">
+        <div className="grid md:grid-cols-3 gap-4 mb-6 items-stretch">
+          <div className="module-panel h-full flex flex-col justify-between">
             <div className="module-kpi">Total Entries</div>
             <div className="module-kpi-value">{total_entries}</div>
           </div>
-          <div className="module-panel">
+          <div className="module-panel h-full flex flex-col justify-between">
             <div className="module-kpi">Start Date</div>
             <div className="text-xl font-semibold text-slate-900 mt-1">{period.start_date || '-'}</div>
           </div>
-          <div className="module-panel">
+          <div className="module-panel h-full flex flex-col justify-between">
             <div className="module-kpi">End Date</div>
             <div className="text-xl font-semibold text-slate-900 mt-1">{period.end_date || '-'}</div>
           </div>
@@ -187,10 +187,10 @@ const AnalyticsPage = () => {
 
         {entries.length > 0 ? (
           <>
-            <div className="grid lg:grid-cols-2 gap-6 mb-6">
-              <div className="module-panel">
-                <h3 className="text-lg font-bold text-slate-900 mb-3">Sentiment Trend</h3>
-                <div style={{ height: '300px' }}>
+            <div className="grid lg:grid-cols-2 gap-6 mb-6 items-stretch">
+              <div className="module-panel h-full flex flex-col">
+                <h3 className="module-section-title">Sentiment Trend</h3>
+                <div className="flex-1" style={{ height: '300px' }}>
                   <Line
                     data={lineChartData}
                     options={{ responsive: true, maintainAspectRatio: false, scales: { y: { min: -1, max: 1 } } }}
@@ -198,23 +198,23 @@ const AnalyticsPage = () => {
                 </div>
               </div>
 
-              <div className="module-panel">
-                <h3 className="text-lg font-bold text-slate-900 mb-3">Mood Distribution</h3>
-                <div style={{ height: '300px' }}>
+              <div className="module-panel h-full flex flex-col">
+                <h3 className="module-section-title">Mood Distribution</h3>
+                <div className="flex-1" style={{ height: '300px' }}>
                   <Doughnut data={moodChartData} options={{ responsive: true, maintainAspectRatio: false }} />
                 </div>
               </div>
             </div>
 
             <div className="module-panel mb-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-3">Stress Distribution</h3>
+              <h3 className="module-section-title">Stress Distribution</h3>
               <div style={{ height: '300px' }}>
                 <Bar data={stressChartData} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </div>
 
             <div className="module-panel">
-              <h3 className="text-lg font-bold text-slate-900 mb-3">Recent Records</h3>
+              <h3 className="module-section-title">Recent Records</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>

@@ -14,6 +14,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from bson.objectid import ObjectId
 import re
+import os
+import json
+from urllib.parse import urlencode
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 from threading import Lock
 
 auth_bp = Blueprint('auth', __name__)
@@ -74,6 +79,32 @@ def _clear_failed_attempts(email):
     key = f"{_get_client_ip()}:{email}"
     with LOGIN_ATTEMPTS_LOCK:
         LOGIN_ATTEMPTS.pop(key, None)
+
+
+def _verify_google_id_token(credential):
+    if not credential:
+        return None
+
+    query = urlencode({'id_token': credential})
+    url = f"https://oauth2.googleapis.com/tokeninfo?{query}"
+
+    try:
+        with urlopen(url, timeout=5) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except (URLError, HTTPError, ValueError):
+        return None
+
+    client_id = os.getenv('GOOGLE_CLIENT_ID', '').strip()
+    audience = str(payload.get('aud', '')).strip()
+    email_verified = str(payload.get('email_verified', '')).lower() == 'true'
+
+    if client_id and audience != client_id:
+        return None
+
+    if not payload.get('email') or not email_verified:
+        return None
+
+    return payload
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -331,3 +362,63 @@ def logout():
     response = jsonify({'message': 'Logged out successfully'})
     unset_jwt_cookies(response)
     return response, 200
+
+
+@auth_bp.route('/google-login', methods=['POST'])
+def google_login():
+    """Authenticate user using a Google ID token credential."""
+    try:
+        data = request.get_json() or {}
+        credential = str(data.get('credential', '')).strip()
+
+        if not credential:
+            return jsonify({
+                'error': 'Validation Error',
+                'message': 'Google credential is required'
+            }), 400
+
+        token_payload = _verify_google_id_token(credential)
+        if not token_payload:
+            return jsonify({
+                'error': 'Authentication Error',
+                'message': 'Invalid Google credential'
+            }), 401
+
+        email = str(token_payload.get('email', '')).strip().lower()
+        name = str(token_payload.get('name', 'Google User')).strip() or 'Google User'
+
+        user = mongo.db.users.find_one({'email': email})
+        if not user:
+            result = mongo.db.users.insert_one({
+                'name': name,
+                'email': email,
+                'password': '',
+                'provider': 'google',
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow(),
+            })
+            user = {
+                '_id': result.inserted_id,
+                'name': name,
+                'email': email,
+            }
+
+        access_token = create_access_token(identity=str(user['_id']))
+
+        response = jsonify({
+            'message': 'Login successful',
+            'user': {
+                'id': str(user['_id']),
+                'name': user.get('name', name),
+                'email': user.get('email', email),
+            }
+        })
+        set_access_cookies(response, access_token)
+        return response, 200
+
+    except Exception as e:
+        print(f"Google login error: {str(e)}")
+        return jsonify({
+            'error': 'Server Error',
+            'message': 'An error occurred during Google login'
+        }), 500

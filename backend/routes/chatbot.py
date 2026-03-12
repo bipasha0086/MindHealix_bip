@@ -154,6 +154,23 @@ def _prune_cache(now_ts, max_items):
         _CHAT_CACHE.pop(key, None)
 
 
+def _normalize_model_list(raw_models, default_model):
+    if isinstance(raw_models, list):
+        models = [str(item).strip() for item in raw_models if str(item).strip()]
+    else:
+        models = [default_model]
+    return models or [default_model]
+
+
+def _provider_attempts(provider, groq_models, gemini_models):
+    if provider == "groq":
+        return [("groq", model) for model in groq_models]
+    if provider == "gemini":
+        return [("gemini", model) for model in gemini_models]
+    # "auto": try Groq models first, then Gemini models.
+    return [("groq", model) for model in groq_models] + [("gemini", model) for model in gemini_models]
+
+
 @chatbot_bp.route("/chat-assistant", methods=["POST"])
 @jwt_required(optional=True)
 def chat_assistant():
@@ -168,21 +185,33 @@ def chat_assistant():
     provider = str(current_app.config.get("CHAT_PROVIDER", "groq")).lower()
     gemini_api_key = current_app.config.get("GEMINI_API_KEY", "")
     gemini_model = current_app.config.get("GEMINI_MODEL", "gemini-1.5-flash")
+    gemini_models = _normalize_model_list(current_app.config.get("GEMINI_MODELS"), gemini_model)
     groq_api_key = current_app.config.get("GROQ_API_KEY", "")
     groq_model = current_app.config.get("GROQ_MODEL", "llama-3.1-8b-instant")
+    groq_models = _normalize_model_list(current_app.config.get("GROQ_MODELS"), groq_model)
     rate_window = max(1, int(current_app.config.get("CHAT_RATE_LIMIT_WINDOW_SECONDS", 60)))
     rate_max = max(1, int(current_app.config.get("CHAT_RATE_LIMIT_MAX_REQUESTS", 12)))
     cache_ttl = max(1, int(current_app.config.get("CHAT_CACHE_TTL_SECONDS", 45)))
     cache_max_items = max(20, int(current_app.config.get("CHAT_CACHE_MAX_ITEMS", 300)))
 
-    if provider == "groq":
-        if not groq_api_key:
+    if provider not in {"groq", "gemini", "auto"}:
+        provider = "groq"
+
+    if provider in {"groq", "auto"} and not groq_api_key:
+        if provider == "groq":
             return jsonify({"message": "Groq API key is not configured on server"}), 503
-        model = groq_model
-    else:
-        if not gemini_api_key:
+        # In auto mode we can still continue with Gemini-only attempts.
+        groq_models = []
+
+    if provider in {"gemini", "auto"} and not gemini_api_key:
+        if provider == "gemini":
             return jsonify({"message": "Gemini API key is not configured on server"}), 503
-        model = gemini_model
+        # In auto mode we can still continue with Groq-only attempts.
+        gemini_models = []
+
+    attempts = _provider_attempts(provider, groq_models, gemini_models)
+    if not attempts:
+        return jsonify({"message": "No configured AI models available"}), 503
 
     client_ip = _get_client_ip()
     now_ts = time.time()
@@ -197,38 +226,52 @@ def chat_assistant():
 
     normalized_context = context_lines if isinstance(context_lines, list) else []
     _prune_cache(now_ts, cache_max_items)
-    cache_key = _build_cache_key(model, message, normalized_context)
-    cached = _CHAT_CACHE.get(cache_key)
-    if cached and cached.get("expires_at", 0) > now_ts:
-        return jsonify({"reply": cached["reply"], "cached": True}), 200
 
-    try:
-        if provider == "groq":
-            parsed = _post_json(
-                GROQ_CHAT_COMPLETIONS_URL,
-                _build_groq_payload(message, normalized_context, model),
-                {
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {groq_api_key}",
-                },
-            )
-            reply = _extract_groq_text(parsed)
-        else:
-            parsed = _post_json(
-                f"{GEMINI_API_BASE}/{model}:generateContent?key={gemini_api_key}",
-                _build_payload(message, normalized_context),
-                {"Content-Type": "application/json"},
-            )
-            reply = _extract_text(parsed)
+    # Cache hit on any configured model/provider pair should be reused.
+    for attempt_provider, attempt_model in attempts:
+        cache_key = _build_cache_key(f"{attempt_provider}:{attempt_model}", message, normalized_context)
+        cached = _CHAT_CACHE.get(cache_key)
+        if cached and cached.get("expires_at", 0) > now_ts:
+            return jsonify({"reply": cached["reply"], "cached": True, "model": attempt_model}), 200
 
-        _CHAT_CACHE[cache_key] = {
-            "reply": reply,
-            "created_at": now_ts,
-            "expires_at": now_ts + cache_ttl,
-        }
-        return jsonify({"reply": reply, "cached": False}), 200
-    except error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="ignore")
-        return jsonify({"message": f"{provider.title()} request failed", "detail": detail[:500]}), 502
-    except Exception as exc:
-        return jsonify({"message": "Chat service unavailable", "detail": str(exc)}), 500
+    last_http_detail = ""
+    last_exception = ""
+
+    for attempt_provider, attempt_model in attempts:
+        cache_key = _build_cache_key(f"{attempt_provider}:{attempt_model}", message, normalized_context)
+        try:
+            if attempt_provider == "groq":
+                parsed = _post_json(
+                    GROQ_CHAT_COMPLETIONS_URL,
+                    _build_groq_payload(message, normalized_context, attempt_model),
+                    {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {groq_api_key}",
+                    },
+                )
+                reply = _extract_groq_text(parsed)
+            else:
+                parsed = _post_json(
+                    f"{GEMINI_API_BASE}/{attempt_model}:generateContent?key={gemini_api_key}",
+                    _build_payload(message, normalized_context),
+                    {"Content-Type": "application/json"},
+                )
+                reply = _extract_text(parsed)
+
+            _CHAT_CACHE[cache_key] = {
+                "reply": reply,
+                "created_at": now_ts,
+                "expires_at": now_ts + cache_ttl,
+            }
+            return jsonify({"reply": reply, "cached": False, "model": attempt_model}), 200
+        except error.HTTPError as exc:
+            last_http_detail = exc.read().decode("utf-8", errors="ignore")[:500]
+            continue
+        except Exception as exc:
+            last_exception = str(exc)
+            continue
+
+    if last_http_detail:
+        return jsonify({"message": "All configured model requests failed", "detail": last_http_detail}), 502
+
+    return jsonify({"message": "Chat service unavailable", "detail": last_exception or "No model succeeded"}), 500

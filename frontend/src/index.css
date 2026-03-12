@@ -182,6 +182,10 @@ code {
   @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }
 
+.module-container-narrow {
+  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
 .module-header-card {
   @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm;
 }
@@ -196,6 +200,10 @@ code {
 
 .module-panel {
   @apply rounded-2xl bg-white border border-slate-200 p-5 shadow-sm;
+}
+
+.module-actions-row {
+  @apply flex flex-col sm:flex-row gap-3;
 }
 
 .module-kpi {
@@ -220,6 +228,30 @@ code {
 
 .section-subheading {
   @apply text-sm text-slate-600 mt-1;
+}
+
+.module-section-title {
+  @apply text-lg font-bold text-slate-900 mb-3;
+}
+
+.module-section-title-tight {
+  @apply text-lg font-bold text-slate-900 mb-2;
+}
+
+.module-btn-primary {
+  @apply rounded-xl bg-sky-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-sky-700 transition disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+.module-btn-secondary {
+  @apply rounded-xl border border-slate-300 text-slate-700 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 transition;
+}
+
+.module-btn-success {
+  @apply rounded-xl bg-emerald-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+.module-btn-danger {
+  @apply rounded-xl bg-rose-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-rose-700 transition;
 }
 
 .panic-shell {

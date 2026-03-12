@@ -20,6 +20,17 @@ const saveUsers = (users) => {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 };
 
+const decodeJwtPayload = (token) => {
+  try {
+    const payload = token.split('.')[1];
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = JSON.parse(window.atob(normalized));
+    return decoded;
+  } catch (_error) {
+    return null;
+  }
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -223,6 +234,70 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (credential) => {
+    if (!credential) {
+      return { success: false, error: 'Google credential is missing' };
+    }
+
+    if (!LOCAL_MODE) {
+      try {
+        const response = await authAPI.googleLogin({ credential });
+        const backendUser = response?.data?.user;
+
+        if (!backendUser) {
+          return { success: false, error: 'Google login failed' };
+        }
+
+        localStorage.setItem(SESSION_USER_KEY, JSON.stringify(backendUser));
+        setUser(backendUser);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error?.response?.data?.message || 'Google login failed',
+        };
+      }
+    }
+
+    try {
+      const payload = decodeJwtPayload(credential);
+      const email = String(payload?.email || '').trim().toLowerCase();
+      const name = String(payload?.name || 'Google User').trim();
+
+      if (!email) {
+        return { success: false, error: 'Google account email was not provided' };
+      }
+
+      const users = loadUsers();
+      let existingUser = users.find((entry) => entry.email === email);
+
+      if (!existingUser) {
+        existingUser = {
+          id: `google_${Date.now()}`,
+          name,
+          email,
+          password: '',
+          provider: 'google',
+          createdAt: new Date().toISOString(),
+        };
+        users.push(existingUser);
+        saveUsers(users);
+      }
+
+      const sessionUser = {
+        id: existingUser.id,
+        name: existingUser.name,
+        email: existingUser.email,
+      };
+
+      localStorage.setItem(SESSION_USER_KEY, JSON.stringify(sessionUser));
+      setUser(sessionUser);
+      return { success: true };
+    } catch (_error) {
+      return { success: false, error: 'Google login failed' };
+    }
+  };
+
   const logout = async () => {
     if (!LOCAL_MODE) {
       try {
@@ -320,6 +395,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    googleLogin,
     logout,
     updateProfile,
   };

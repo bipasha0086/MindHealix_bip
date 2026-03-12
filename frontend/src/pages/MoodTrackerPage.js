@@ -69,7 +69,7 @@ const MoodTrackerPage = () => {
   if (success && result) {
     return (
       <div className="module-shell">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="module-container-narrow">
           <div className="module-panel p-6">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
@@ -79,7 +79,7 @@ const MoodTrackerPage = () => {
               <p className="text-slate-600 mt-1">Your stress rating and recommendations are updated.</p>
             </div>
 
-            <div className="grid md:grid-cols-5 gap-3 mb-5">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5 items-stretch">
               <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
                 <div className="text-xs text-slate-500">Mood</div>
                 <div className="text-lg font-bold text-slate-900">{result.mood}</div>
@@ -163,7 +163,7 @@ const MoodTrackerPage = () => {
               </div>
             )}
 
-            <div className="flex gap-3">
+            <div className="module-actions-row">
               <button
                 onClick={() => {
                   setSuccess(false);
@@ -179,13 +179,13 @@ const MoodTrackerPage = () => {
                   setSleepHours(7);
                   setFaceStressPrediction(null);
                 }}
-                className="flex-1 rounded-xl border border-slate-300 text-slate-700 py-2.5 font-semibold hover:bg-slate-50"
+                className="flex-1 module-btn-secondary"
               >
                 Track Another
               </button>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex-1 rounded-xl bg-sky-600 text-white py-2.5 font-semibold hover:bg-sky-700"
+                className="flex-1 module-btn-primary"
               >
                 Go to Dashboard
               </button>
@@ -198,7 +198,7 @@ const MoodTrackerPage = () => {
 
   return (
     <div className="module-shell">
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="module-container">
         <div className="module-header-card mb-6">
           <h1 className="module-title">Mood Tracker Module</h1>
           <p className="module-subtitle">Log mood, sleep, and thoughts for accurate stress scoring.</p>
@@ -206,12 +206,12 @@ const MoodTrackerPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="module-panel">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Select Current Mood</h2>
+            <h2 className="module-section-title">Select Current Mood</h2>
             <InteractiveMoodSelector selectedMood={selectedMood} onMoodSelect={setSelectedMood} />
           </div>
 
           <div className="module-panel">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Sleep Hours</h2>
+            <h2 className="module-section-title">Sleep Hours</h2>
             <div className="rounded-xl bg-sky-50 border border-sky-100 p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-slate-600">Last night sleep</span>
@@ -230,7 +230,7 @@ const MoodTrackerPage = () => {
           </div>
 
           <div className="module-panel">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Energy Level</h2>
+            <h2 className="module-section-title">Energy Level</h2>
             <p className="text-sm text-slate-600 mb-3">How energetic do you feel today?</p>
             <div className="grid grid-cols-3 gap-3">
               {['Low', 'Medium', 'High'].map((level) => (
@@ -251,7 +251,7 @@ const MoodTrackerPage = () => {
           </div>
 
           <div className="module-panel">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Anxiety Level</h2>
+            <h2 className="module-section-title">Anxiety Level</h2>
             <div className="rounded-xl bg-purple-50 border border-purple-100 p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-slate-600">How anxious do you feel?</span>
@@ -274,9 +274,9 @@ const MoodTrackerPage = () => {
           </div>
 
           <div className="module-panel">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Physical Activity</h2>
+            <h2 className="module-section-title">Physical Activity</h2>
             <p className="text-sm text-slate-600 mb-3">Any exercise or physical activity today?</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {['None', 'Light', 'Moderate', 'Intense'].map((activity) => (
                 <button
                   key={activity}
@@ -295,7 +295,7 @@ const MoodTrackerPage = () => {
           </div>
 
           <div className="module-panel">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Social Interaction</h2>
+            <h2 className="module-section-title">Social Interaction</h2>
             <p className="text-sm text-slate-600 mb-3">How much did you interact with others?</p>
             <div className="grid grid-cols-3 gap-3">
               {['None', 'Some', 'Plenty'].map((level) => (
@@ -316,7 +316,7 @@ const MoodTrackerPage = () => {
           </div>
 
           <div className="module-panel">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Gratitude Moment 🌟</h2>
+            <h2 className="module-section-title">Gratitude Moment 🌟</h2>
             <p className="text-sm text-slate-600 mb-3">What's one thing you're grateful for today?</p>
             <input
               type="text"
@@ -329,7 +329,7 @@ const MoodTrackerPage = () => {
 
           {selectedMood && (
             <div className="module-panel">
-              <h2 className="text-lg font-bold text-slate-900 mb-3">AI Prompt Suggestions</h2>
+              <h2 className="module-section-title">AI Prompt Suggestions</h2>
               <AIDailyPrompts
                 mood={selectedMood}
                 onPromptSelect={(prompt) => {
@@ -344,7 +344,7 @@ const MoodTrackerPage = () => {
 
           <div className="module-panel">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-slate-900">Journal Input</h2>
+              <h2 className="module-section-title-tight mb-0">Journal Input</h2>
               <div className="flex items-center space-x-2 bg-slate-100 rounded-lg p-1">
                 <button
                   type="button"
@@ -382,7 +382,7 @@ const MoodTrackerPage = () => {
 
           {journalText && (
             <div className="module-panel">
-              <h2 className="text-lg font-bold text-slate-900 mb-3">Real-time Sentiment</h2>
+              <h2 className="module-section-title">Real-time Sentiment</h2>
               <RealTimeSentiment text={journalText} />
             </div>
           )}
@@ -399,7 +399,7 @@ const MoodTrackerPage = () => {
           <button
             type="submit"
             disabled={loading || !selectedMood}
-            className="w-full rounded-xl bg-sky-600 text-white py-3 font-semibold hover:bg-sky-700 disabled:opacity-60"
+            className="w-full module-btn-primary"
           >
             {loading ? 'Analyzing...' : 'Submit Mood Entry'}
           </button>

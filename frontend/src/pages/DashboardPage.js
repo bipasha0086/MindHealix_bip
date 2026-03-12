@@ -156,13 +156,6 @@ const DashboardPage = () => {
 
   const modules = [
     {
-      title: 'Dashboard',
-      subtitle: 'Overview & AI insights',
-      icon: '🏠',
-      to: '/dashboard',
-      color: 'bg-sky-50 border-sky-100',
-    },
-    {
       title: 'Mood Tracker',
       subtitle: 'Log mood and stress',
       icon: '😊',
@@ -215,13 +208,13 @@ const DashboardPage = () => {
         </div>
 
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">Main Modules</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h2 className="section-heading mb-4">Main Modules</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {modules.map((module) => (
-              <Link key={module.title} to={module.to} className={`rounded-2xl border p-5 shadow-sm hover:shadow-md transition ${module.color}`}>
+              <Link key={module.title} to={module.to} className={`h-full rounded-2xl border p-5 shadow-sm hover:shadow-md transition flex flex-col ${module.color}`}>
                 <div className="module-icon-badge">{module.icon}</div>
                 <h3 className="mt-3 text-lg font-bold text-slate-900">{module.title}</h3>
-                <p className="text-sm text-slate-600">{module.subtitle}</p>
+                <p className="text-sm text-slate-600 mt-1">{module.subtitle}</p>
               </Link>
             ))}
           </div>
@@ -230,7 +223,7 @@ const DashboardPage = () => {
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-2xl border border-rose-200 bg-white p-5 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-3">Emergency Panic Support</h2>
+              <h2 className="section-heading mb-3">Emergency Panic Support</h2>
               <p className="text-sm text-slate-600 mb-4">If panic starts, press the button below for immediate breathing guidance and support chat.</p>
               <PanicButton onActivate={() => navigate('/panic-mode')} />
 
@@ -256,7 +249,7 @@ const DashboardPage = () => {
 
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-slate-900">Motivational Thought</h3>
+                <h3 className="module-section-title-tight mb-0">Motivational Thought</h3>
                 <button
                   type="button"
                   onClick={() => setThought(POSITIVE_THOUGHTS[Math.floor(Math.random() * POSITIVE_THOUGHTS.length)])}
@@ -269,34 +262,34 @@ const DashboardPage = () => {
               <p className="text-xs text-emerald-700 mt-2">Auto-refreshes every 25 seconds.</p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="module-panel">
+            <div className="grid sm:grid-cols-2 gap-4 items-stretch">
+              <div className="module-panel h-full flex flex-col justify-between">
                 <div className="module-kpi">Total Entries</div>
                 <div className="module-kpi-value">{statistics?.total_entries || 0}</div>
               </div>
-              <div className="module-panel">
+              <div className="module-panel h-full flex flex-col justify-between">
                 <div className="module-kpi">Days Tracked</div>
                 <div className="module-kpi-value">{statistics?.days_tracked || 0}</div>
               </div>
-              <div className="module-panel">
+              <div className="module-panel h-full flex flex-col justify-between">
                 <div className="module-kpi">Current Stress Level</div>
                 <div className={`inline-block px-3 py-1 rounded-lg mt-2 font-semibold stress-${String(statistics?.current_stress_level || 'low').toLowerCase()}`}>
                   {statistics?.current_stress_level || 'Low'}
                 </div>
               </div>
-              <div className="module-panel">
+              <div className="module-panel h-full flex flex-col justify-between">
                 <div className="module-kpi">Average Stress Score</div>
                 <div className="module-kpi-value">{statistics?.average_stress_score || 0}/100</div>
               </div>
             </div>
 
             <div className="module-panel">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">AI Recommendations</h3>
+              <h3 className="module-section-title-tight">AI Recommendations</h3>
               <p className="text-slate-700">{aiRecommendation}</p>
             </div>
 
             <div className="module-panel">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">Recent Stress Entries</h3>
+              <h3 className="module-section-title mb-4">Recent Stress Entries</h3>
               {recent_entries && recent_entries.length > 0 ? (
                 <div className="space-y-3">
                   {recent_entries.map((entry) => (
@@ -340,15 +333,15 @@ const DashboardPage = () => {
             <div>
               <h3 className="section-heading">Recommended Articles</h3>
               <p className="section-subheading">Practical and short reads to support your daily wellbeing.</p>
-              <div className="grid md:grid-cols-3 gap-4 mt-4">
+              <div className="grid md:grid-cols-3 gap-4 mt-4 items-stretch">
                 {WELLNESS_ARTICLES.map((article) => (
-                  <article key={article.title} className="feature-glass rounded-2xl p-4">
+                  <article key={article.title} className="feature-glass rounded-2xl p-4 h-full flex flex-col">
                     <div className="flex items-center justify-between text-xs mb-2">
                       <span className="px-2 py-1 rounded-md bg-cyan-100 text-cyan-800 font-semibold">{article.topic}</span>
                       <span className="text-slate-500">{article.readTime}</span>
                     </div>
                     <h4 className="font-bold text-slate-900 leading-snug">{article.title}</h4>
-                    <p className="text-sm text-slate-600 mt-2">{article.summary}</p>
+                    <p className="text-sm text-slate-600 mt-2 flex-1">{article.summary}</p>
                   </article>
                 ))}
               </div>
@@ -364,7 +357,7 @@ const DashboardPage = () => {
             />
 
             <div className="module-panel border-rose-200">
-              <h3 className="text-lg font-bold text-slate-900 mb-3">Emergency Contact</h3>
+              <h3 className="module-section-title">Emergency Contact</h3>
               <p className="text-xs text-slate-600 mb-3">Add one trusted person for quick support in high-stress moments.</p>
 
               <div className="space-y-3">
@@ -393,7 +386,7 @@ const DashboardPage = () => {
                 <button
                   type="button"
                   onClick={saveEmergencyContact}
-                  className="w-full rounded-lg bg-rose-600 text-white py-2 text-sm font-semibold hover:bg-rose-700"
+                  className="w-full module-btn-danger"
                 >
                   Save Contact
                 </button>

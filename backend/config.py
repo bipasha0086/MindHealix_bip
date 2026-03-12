@@ -60,8 +60,18 @@ class Config:
     CHAT_PROVIDER = os.getenv('CHAT_PROVIDER', 'groq').lower()
     GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
     GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
+    GROQ_MODELS = [
+        model.strip()
+        for model in os.getenv('GROQ_MODELS', GROQ_MODEL).split(',')
+        if model.strip()
+    ]
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
     GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
+    GEMINI_MODELS = [
+        model.strip()
+        for model in os.getenv('GEMINI_MODELS', GEMINI_MODEL).split(',')
+        if model.strip()
+    ]
     CHAT_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv('CHAT_RATE_LIMIT_WINDOW_SECONDS', 60))
     CHAT_RATE_LIMIT_MAX_REQUESTS = int(os.getenv('CHAT_RATE_LIMIT_MAX_REQUESTS', 12))
     CHAT_CACHE_TTL_SECONDS = int(os.getenv('CHAT_CACHE_TTL_SECONDS', 45))

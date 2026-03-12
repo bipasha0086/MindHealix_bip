@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import BrandMark from '../components/BrandMark';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import AuthSplitLayout from '../components/auth/AuthSplitLayout';
+import AuthInputField from '../components/auth/AuthInputField';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -12,8 +16,9 @@ const RegisterPage = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const { register } = useAuth();
+  const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
   const validateForm = () => {
     const nextErrors = {};
@@ -70,11 +75,23 @@ const RegisterPage = () => {
     }
   };
 
+  const handleGoogleLogin = async (credential) => {
+    setLoading(true);
+    const result = await googleLogin(credential);
+    setLoading(false);
+
+    if (result.success) {
+      navigate('/dashboard');
+    } else {
+      setErrors({ submit: result.error });
+    }
+  };
+
   return (
-    <div className="min-h-screen py-10 px-4 sm:py-14">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-8 items-stretch">
-          <div className="feature-glass rounded-3xl p-7 sm:p-9 border border-cyan-100 animate-rise">
+    <AuthSplitLayout
+      className="animate-rise"
+      left={(
+        <>
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1.5">
               <span>Join MindHealix</span>
               <span>•</span>
@@ -106,12 +123,17 @@ const RegisterPage = () => {
                 <p className="text-sm text-slate-600 mt-1">See trends with clear analytics.</p>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 sm:p-7 animate-rise stagger-1">
+        </>
+      )}
+      right={(
+        <>
             <div className="text-center mb-6">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-r from-cyan-600 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg">
-                🌤️
+              <div className="flex justify-center">
+                <BrandMark
+                  linkTo={null}
+                  iconClassName="w-14 h-14"
+                  textClassName="text-slate-900 font-bold text-2xl"
+                />
               </div>
               <h1 className="text-3xl font-bold text-slate-900 mt-4">Create Account</h1>
               <p className="text-slate-600 mt-1">Start tracking your wellness today</p>
@@ -124,87 +146,48 @@ const RegisterPage = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`w-full rounded-xl border px-4 py-3 outline-none transition ${
-                    errors.name
-                      ? 'border-rose-300 focus:ring-2 focus:ring-rose-200'
-                      : 'border-slate-300 focus:ring-2 focus:ring-cyan-200 focus:border-cyan-400'
-                  }`}
-                  placeholder="Your name"
-                />
-                {errors.name && <p className="text-rose-600 text-xs mt-1">{errors.name}</p>}
-              </div>
+              <AuthInputField
+                id="name"
+                name="name"
+                label="Full Name"
+                value={formData.name}
+                onChange={handleChange}
+                error={errors.name}
+                placeholder="Your name"
+              />
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full rounded-xl border px-4 py-3 outline-none transition ${
-                    errors.email
-                      ? 'border-rose-300 focus:ring-2 focus:ring-rose-200'
-                      : 'border-slate-300 focus:ring-2 focus:ring-cyan-200 focus:border-cyan-400'
-                  }`}
-                  placeholder="you@example.com"
-                />
-                {errors.email && <p className="text-rose-600 text-xs mt-1">{errors.email}</p>}
-              </div>
+              <AuthInputField
+                id="email"
+                name="email"
+                type="email"
+                label="Email Address"
+                value={formData.email}
+                onChange={handleChange}
+                error={errors.email}
+                placeholder="you@example.com"
+              />
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`w-full rounded-xl border px-4 py-3 outline-none transition ${
-                    errors.password
-                      ? 'border-rose-300 focus:ring-2 focus:ring-rose-200'
-                      : 'border-slate-300 focus:ring-2 focus:ring-cyan-200 focus:border-cyan-400'
-                  }`}
-                  placeholder="At least 8 characters"
-                />
-                {errors.password && <p className="text-rose-600 text-xs mt-1">{errors.password}</p>}
-              </div>
+              <AuthInputField
+                id="password"
+                name="password"
+                type="password"
+                label="Password"
+                value={formData.password}
+                onChange={handleChange}
+                error={errors.password}
+                placeholder="At least 8 characters"
+              />
 
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`w-full rounded-xl border px-4 py-3 outline-none transition ${
-                    errors.confirmPassword
-                      ? 'border-rose-300 focus:ring-2 focus:ring-rose-200'
-                      : 'border-slate-300 focus:ring-2 focus:ring-cyan-200 focus:border-cyan-400'
-                  }`}
-                  placeholder="Re-enter password"
-                />
-                {errors.confirmPassword && (
-                  <p className="text-rose-600 text-xs mt-1">{errors.confirmPassword}</p>
-                )}
-              </div>
+              <AuthInputField
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                label="Confirm Password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                error={errors.confirmPassword}
+                placeholder="Re-enter password"
+              />
 
               <button
                 type="submit"
@@ -215,16 +198,28 @@ const RegisterPage = () => {
               </button>
             </form>
 
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px bg-slate-200 flex-1" />
+              <span className="text-xs font-semibold text-slate-500">OR</span>
+              <div className="h-px bg-slate-200 flex-1" />
+            </div>
+
+            <GoogleSignInButton
+              clientId={googleClientId}
+              onCredential={handleGoogleLogin}
+              disabled={loading}
+              text="signup_with"
+            />
+
             <p className="text-center text-sm text-slate-600 mt-5">
               Already have an account?{' '}
               <Link to="/login" className="text-cyan-700 font-semibold hover:text-cyan-900">
                 Sign in
               </Link>
             </p>
-          </div>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    />
   );
 };
 

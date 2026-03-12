@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import BrandMark from '../components/BrandMark';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import AuthSplitLayout from '../components/auth/AuthSplitLayout';
+import AuthInputField from '../components/auth/AuthInputField';
 
 const MOTIVATION_QUOTES = [
   'Breathe in calm, breathe out pressure. You are doing better than you think.',
@@ -22,8 +26,9 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [quoteIndex, setQuoteIndex] = useState(0);
 
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
   useEffect(() => {
     setQuoteIndex(Math.floor(Math.random() * MOTIVATION_QUOTES.length));
@@ -81,11 +86,22 @@ const LoginPage = () => {
     }
   };
 
+  const handleGoogleLogin = async (credential) => {
+    setLoading(true);
+    const result = await googleLogin(credential);
+    setLoading(false);
+
+    if (result.success) {
+      navigate('/dashboard');
+    } else {
+      setErrors({ submit: result.error });
+    }
+  };
+
   return (
-    <div className="min-h-screen px-4 py-10 sm:py-14">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-8 items-stretch">
-          <div className="feature-glass rounded-3xl p-7 sm:p-9 border border-cyan-100">
+    <AuthSplitLayout
+      left={(
+        <>
             <div className="inline-flex items-center gap-2 rounded-full bg-cyan-100 text-cyan-800 text-xs font-semibold px-3 py-1.5">
               <span>Daily Reset</span>
               <span>•</span>
@@ -130,12 +146,17 @@ const LoginPage = () => {
                 <div className="text-slate-600">Track progress</div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 sm:p-7">
+        </>
+      )}
+      right={(
+        <>
             <div className="text-center mb-6">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-cyan-600 text-white flex items-center justify-center text-2xl shadow-lg">
-                🧠
+              <div className="flex justify-center">
+                <BrandMark
+                  linkTo={null}
+                  iconClassName="w-14 h-14"
+                  textClassName="text-slate-900 font-bold text-2xl"
+                />
               </div>
               <h1 className="text-3xl font-bold text-slate-900 mt-4">Sign In</h1>
               <p className="text-slate-600 mt-1">Continue your wellness journey</p>
@@ -148,56 +169,38 @@ const LoginPage = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full rounded-xl border px-4 py-3 outline-none transition ${
-                    errors.email
-                      ? 'border-rose-300 focus:ring-2 focus:ring-rose-200'
-                      : 'border-slate-300 focus:ring-2 focus:ring-cyan-200 focus:border-cyan-400'
-                  }`}
-                  placeholder="you@example.com"
-                />
-                {errors.email && <p className="text-rose-600 text-xs mt-1">{errors.email}</p>}
-              </div>
+              <AuthInputField
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                label="Email Address"
+                value={formData.email}
+                onChange={handleChange}
+                error={errors.email}
+                placeholder="you@example.com"
+              />
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`w-full rounded-xl border px-4 py-3 pr-11 outline-none transition ${
-                      errors.password
-                        ? 'border-rose-300 focus:ring-2 focus:ring-rose-200'
-                        : 'border-slate-300 focus:ring-2 focus:ring-cyan-200 focus:border-cyan-400'
-                    }`}
-                    placeholder="Enter your password"
-                  />
+              <AuthInputField
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                label="Password"
+                value={formData.password}
+                onChange={handleChange}
+                error={errors.password}
+                placeholder="Enter your password"
+                rightElement={(
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 text-sm"
+                    className="text-slate-500 hover:text-slate-800 text-sm"
                   >
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
-                </div>
-                {errors.password && <p className="text-rose-600 text-xs mt-1">{errors.password}</p>}
-              </div>
+                )}
+              />
 
               <button
                 type="submit"
@@ -207,6 +210,19 @@ const LoginPage = () => {
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
+
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px bg-slate-200 flex-1" />
+              <span className="text-xs font-semibold text-slate-500">OR</span>
+              <div className="h-px bg-slate-200 flex-1" />
+            </div>
+
+            <GoogleSignInButton
+              clientId={googleClientId}
+              onCredential={handleGoogleLogin}
+              disabled={loading}
+              text="signin_with"
+            />
 
             <div className="mt-6 rounded-lg bg-cyan-50 border border-cyan-100 p-3 text-xs text-slate-700">
               {localMode
@@ -220,10 +236,9 @@ const LoginPage = () => {
                 Create account
               </Link>
             </p>
-          </div>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    />
   );
 };
 

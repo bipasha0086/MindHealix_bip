@@ -201,7 +201,7 @@ const AssessmentPage = () => {
   if (!assessmentType) {
     return (
       <div className="module-shell">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="module-container-narrow">
           <div className="module-header-card mb-6">
             <h1 className="module-title">Mental Health Assessment</h1>
             <p className="module-subtitle">
@@ -209,25 +209,25 @@ const AssessmentPage = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="module-panel hover:shadow-lg transition cursor-pointer" onClick={() => setAssessmentType('depression')}>
+          <div className="grid md:grid-cols-2 gap-6 items-stretch">
+            <div className="module-panel hover:shadow-lg transition cursor-pointer h-full flex flex-col" onClick={() => setAssessmentType('depression')}>
               <div className="text-4xl mb-3">🧠</div>
               <h2 className="text-xl font-bold text-slate-900 mb-2">Depression Screening</h2>
-              <p className="text-slate-600 mb-4">
+              <p className="text-slate-600 mb-4 flex-1">
                 9-question assessment to evaluate depression symptoms over the past 2 weeks. Based on PHQ-9 screening tool.
               </p>
-              <button className="w-full rounded-xl bg-sky-600 text-white py-2.5 font-semibold hover:bg-sky-700">
+              <button className="w-full rounded-xl bg-sky-600 text-white py-2.5 font-semibold hover:bg-sky-700 mt-auto">
                 Start Depression Assessment
               </button>
             </div>
 
-            <div className="module-panel hover:shadow-lg transition cursor-pointer" onClick={() => setAssessmentType('anxiety')}>
+            <div className="module-panel hover:shadow-lg transition cursor-pointer h-full flex flex-col" onClick={() => setAssessmentType('anxiety')}>
               <div className="text-4xl mb-3">😰</div>
               <h2 className="text-xl font-bold text-slate-900 mb-2">Anxiety Screening</h2>
-              <p className="text-slate-600 mb-4">
+              <p className="text-slate-600 mb-4 flex-1">
                 7-question assessment to evaluate anxiety symptoms over the past 2 weeks. Based on GAD-7 screening tool.
               </p>
-              <button className="w-full rounded-xl bg-purple-600 text-white py-2.5 font-semibold hover:bg-purple-700">
+              <button className="w-full rounded-xl bg-purple-600 text-white py-2.5 font-semibold hover:bg-purple-700 mt-auto">
                 Start Anxiety Assessment
               </button>
             </div>
@@ -251,7 +251,7 @@ const AssessmentPage = () => {
   if (result) {
     return (
       <div className="module-shell">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="module-container-narrow">
           <div className={`rounded-2xl border-2 border-${result.color}-200 bg-${result.color}-50 p-6 mb-6`}>
             <div className="text-center mb-4">
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 text-3xl">
@@ -278,7 +278,7 @@ const AssessmentPage = () => {
           </div>
 
           <div className="module-panel mb-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-3">
+            <h3 className="module-section-title">
               {result.solutions.some(s => s.includes('🆘') || s.includes('🚨')) ? '🚨 Recommended Actions' : '💡 Recommended Solutions'}
             </h3>
             <ul className="space-y-2">
@@ -293,44 +293,44 @@ const AssessmentPage = () => {
 
           <div className="module-panel mb-6 bg-cyan-50 border-cyan-200">
             <h3 className="font-semibold text-slate-900 mb-2">🔗 Use Our Tools</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid sm:grid-cols-2 gap-2 items-stretch">
               <button
                 onClick={() => navigate('/mood-tracker')}
-                className="rounded-lg bg-white border border-slate-300 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg bg-white border border-slate-300 py-2 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 h-full"
               >
                 Track Your Mood
               </button>
               <button
                 onClick={() => navigate('/panic-mode')}
-                className="rounded-lg bg-white border border-slate-300 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg bg-white border border-slate-300 py-2 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 h-full"
               >
                 Panic Mode Help
               </button>
               <button
                 onClick={() => navigate('/emergency-support')}
-                className="rounded-lg bg-white border border-slate-300 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg bg-white border border-slate-300 py-2 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 h-full"
               >
                 Emergency Contact
               </button>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="rounded-lg bg-white border border-slate-300 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg bg-white border border-slate-300 py-2 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 h-full"
               >
                 AI Chatbot
               </button>
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="module-actions-row">
             <button
               onClick={resetAssessment}
-              className="flex-1 rounded-xl border border-slate-300 text-slate-700 py-2.5 font-semibold hover:bg-slate-50"
+              className="flex-1 module-btn-secondary"
             >
               Take Another Assessment
             </button>
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex-1 rounded-xl bg-sky-600 text-white py-2.5 font-semibold hover:bg-sky-700"
+              className="flex-1 module-btn-primary"
             >
               Go to Dashboard
             </button>
@@ -346,7 +346,7 @@ const AssessmentPage = () => {
 
   return (
     <div className="module-shell">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="module-container-narrow">
         <div className="module-header-card mb-6">
           <h1 className="module-title">
             {assessmentType === 'depression' ? 'Depression' : 'Anxiety'} Assessment
@@ -382,17 +382,17 @@ const AssessmentPage = () => {
           ))}
         </div>
 
-        <div className="flex gap-3 mt-6">
+        <div className="module-actions-row mt-6">
           <button
             onClick={resetAssessment}
-            className="rounded-xl border border-slate-300 text-slate-700 px-6 py-2.5 font-semibold hover:bg-slate-50"
+            className="module-btn-secondary"
           >
             Cancel
           </button>
           <button
             onClick={calculateScore}
             disabled={!allAnswered}
-            className="flex-1 rounded-xl bg-sky-600 text-white py-2.5 font-semibold hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 module-btn-primary"
           >
             {allAnswered ? 'Get Results' : `Answer All Questions (${currentQuestions.filter(q => answers[q.id] !== undefined).length}/${currentQuestions.length})`}
           </button>

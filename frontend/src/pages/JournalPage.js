@@ -57,7 +57,7 @@ const JournalPage = () => {
 
   return (
     <div className="module-shell">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="module-container">
         <div className="module-header-card mb-6">
           <h1 className="module-title">Journal Module</h1>
           <p className="module-subtitle">Reflect with writing or voice and receive AI emotion insights.</p>
@@ -66,7 +66,7 @@ const JournalPage = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
             <div className="module-panel">
-              <h3 className="text-lg font-bold text-slate-900 mb-3">Mood Context</h3>
+              <h3 className="module-section-title">Mood Context</h3>
               <select
                 value={selectedMood}
                 onChange={(e) => setSelectedMood(e.target.value)}
@@ -82,7 +82,7 @@ const JournalPage = () => {
             </div>
 
             <div className="module-panel">
-              <h3 className="text-lg font-bold text-slate-900 mb-3">AI Prompt Ideas</h3>
+              <h3 className="module-section-title">AI Prompt Ideas</h3>
               <AIDailyPrompts
                 mood={selectedMood}
                 onPromptSelect={(prompt) => setText((prev) => `${prev}\n\n${prompt}\n\n`)}
@@ -91,7 +91,7 @@ const JournalPage = () => {
 
             {analysis && (
               <div className="module-panel">
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Latest Analysis</h3>
+                <h3 className="module-section-title-tight">Latest Analysis</h3>
                 <p className="text-sm text-slate-700">Sentiment Score: {Number(analysis.sentiment?.compound || 0).toFixed(2)}</p>
                 <p className="text-sm text-slate-700 mt-1">State: {analysis.emotional_state || 'Neutral'}</p>
               </div>
@@ -101,7 +101,7 @@ const JournalPage = () => {
           <div className="lg:col-span-2 space-y-6">
             <div className="module-panel">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-slate-900">Your Journal Entry</h2>
+                <h2 className="section-heading">Your Journal Entry</h2>
                 <div className="flex items-center space-x-2 bg-slate-100 rounded-lg p-1">
                   <button
                     type="button"
@@ -136,28 +136,28 @@ const JournalPage = () => {
                 />
               )}
 
-              <div className="flex items-center justify-between mt-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
                 <div className="text-sm text-slate-500">
                   {text.length} chars • {text.trim() ? text.trim().split(/\s+/).length : 0} words
                 </div>
-                <div className="flex gap-2">
+                <div className="module-actions-row sm:justify-end">
                   <button
                     onClick={() => setText('')}
-                    className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                    className="module-btn-secondary"
                   >
                     Clear
                   </button>
                   <button
                     onClick={handleAnalyze}
                     disabled={loading}
-                    className="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:opacity-60"
+                    className="module-btn-primary"
                   >
                     {loading ? 'Analyzing...' : 'Analyze'}
                   </button>
                   <button
                     onClick={handleSaveJournal}
                     disabled={saving || !text.trim()}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60"
+                    className="module-btn-success"
                   >
                     {saving ? 'Saving...' : 'Save Journal Entry'}
                   </button>
@@ -173,7 +173,7 @@ const JournalPage = () => {
 
             {text && text.length > 10 && (
               <div className="module-panel">
-                <h2 className="text-lg font-bold text-slate-900 mb-3">Real-time Sentiment</h2>
+                <h2 className="module-section-title">Real-time Sentiment</h2>
                 <RealTimeSentiment text={text} onAnalysisComplete={(data) => setAnalysis(data)} />
               </div>
             )}
