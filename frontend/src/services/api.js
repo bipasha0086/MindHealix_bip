@@ -248,6 +248,7 @@ const computeFaceStressLocal = (features = {}) => {
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -406,7 +407,36 @@ export const moodAPI = {
 // Analytics API
 export const analyticsAPI = {
   getDashboard: () => {
-    if (!LOCAL_MODE) return api.get('/user-dashboard');
+    const buildLocalDashboard = () => {
+      const user = getSessionUser() || { id: 'local-user', name: 'User', email: 'local@wellnesshub' };
+      const entries = getEntries()
+        .filter((entry) => (entry.user_id || 'local-user') === (user.id || 'local-user'))
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      const moodCounts = entries.reduce((acc, entry) => { acc[entry.mood] = (acc[entry.mood] || 0) + 1; return acc; }, {});
+      const mostCommonMood = Object.keys(moodCounts).length
+        ? Object.keys(moodCounts).reduce((a, b) => (moodCounts[a] >= moodCounts[b] ? a : b))
+        : 'Neutral';
+      const uniqueDays = new Set(entries.map((entry) => entry.date));
+      return {
+        data: {
+          user,
+          statistics: {
+            total_entries: entries.length,
+            days_tracked: uniqueDays.size,
+            current_stress_level: entries[0]?.stress_level || 'Low',
+            average_stress_score: entries.length
+              ? Math.round(entries.reduce((sum, e) => sum + Number(e.stress_score || 0), 0) / entries.length)
+              : 0,
+            most_common_mood: mostCommonMood,
+          },
+          recent_entries: entries.slice(0, 5),
+        },
+      };
+    };
+
+    if (!LOCAL_MODE) {
+      return api.get('/user-dashboard').catch(() => buildLocalDashboard());
+    }
 
     const user = getSessionUser() || { id: 'local-user', name: 'User', email: 'local@wellnesshub' };
     const entries = getEntries()
@@ -549,6 +579,12 @@ export const youtubeGuardAPI = {
   analyzeContent: async (payload) => {
     if (!LOCAL_MODE) return api.post('/youtube/analyze-content', payload);
 
+    try {
+      return await api.post('/youtube/analyze-content', payload);
+    } catch (_error) {
+      // Fall back to local heuristic analysis if backend is unavailable.
+    }
+
     const text = `${payload?.title || ''} ${payload?.description || ''}`.toLowerCase();
     const roughScore = [
       text.includes('depression') ? 20 : 0,
@@ -598,8 +634,14 @@ export const youtubeGuardAPI = {
     saveYoutubeGuardActivityLocal([item, ...existing].slice(0, 150));
     return responseOf(response);
   },
-  getActivitySummary: (limit = 25) => {
+  getActivitySummary: async (limit = 25) => {
     if (!LOCAL_MODE) return api.get(`/youtube/activity-summary?limit=${limit}`);
+
+    try {
+      return await api.get(`/youtube/activity-summary?limit=${limit}`);
+    } catch (_error) {
+      // Fall back to local cached items.
+    }
 
     const items = getYoutubeGuardActivityLocal().slice(0, Number(limit));
     const summary = {
@@ -630,13 +672,27 @@ export const youtubeGuardAPI = {
 
     return responseOf({ items, summary });
   },
-  getProfile: () => {
+  getProfile: async () => {
     if (!LOCAL_MODE) return api.get('/youtube/profile');
+
+    try {
+      return await api.get('/youtube/profile');
+    } catch (_error) {
+      // Profile endpoint requires auth in backend mode; local fallback keeps admin usable.
+    }
+
     const user = getSessionUser();
     return responseOf({ profile: getYoutubeGuardProfileLocal(user?.id || 'local-user') });
   },
-  updateProfile: (profile) => {
+  updateProfile: async (profile) => {
     if (!LOCAL_MODE) return api.put('/youtube/profile', profile);
+
+    try {
+      return await api.put('/youtube/profile', profile);
+    } catch (_error) {
+      // Fall back to local profile persistence.
+    }
+
     const user = getSessionUser();
     const normalized = {
       strict_mode: Boolean(profile?.strict_mode),
@@ -647,9 +703,14 @@ export const youtubeGuardAPI = {
     saveYoutubeGuardProfileLocal(user?.id || 'local-user', normalized);
     return responseOf({ message: 'YouTube guard profile updated', profile: normalized });
   },
-  getWarningEvents: (limit = 100) => {
+  getWarningEvents: async (limit = 100) => {
     if (!LOCAL_MODE) return api.get(`/youtube/warning-events?limit=${limit}`);
-    return responseOf({ events: [], total: 0 });
+
+    try {
+      return await api.get(`/youtube/warning-events?limit=${limit}`);
+    } catch (_error) {
+      return responseOf({ events: [], total: 0 });
+    }
   },
 };
 

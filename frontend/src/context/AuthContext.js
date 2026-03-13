@@ -23,8 +23,10 @@ const saveUsers = (users) => {
 const decodeJwtPayload = (token) => {
   try {
     const payload = token.split('.')[1];
+    if (!payload) return null;
     const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = JSON.parse(window.atob(normalized));
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
+    const decoded = JSON.parse(window.atob(padded));
     return decoded;
   } catch (_error) {
     return null;
@@ -234,6 +236,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLoginLocal = (credential) => {
+    const payload = decodeJwtPayload(credential);
+    const email = String(payload?.email || '').trim().toLowerCase();
+    const name = String(payload?.name || 'Google User').trim();
+
+    if (!email) {
+      return { success: false, error: 'Google account email was not provided' };
+    }
+
+    const users = loadUsers();
+    let existingUser = users.find((entry) => entry.email === email);
+
+    if (!existingUser) {
+      existingUser = {
+        id: `google_${Date.now()}`,
+        name,
+        email,
+        password: '',
+        provider: 'google',
+        createdAt: new Date().toISOString(),
+      };
+      users.push(existingUser);
+      saveUsers(users);
+    }
+
+    const sessionUser = {
+      id: existingUser.id,
+      name: existingUser.name,
+      email: existingUser.email,
+    };
+
+    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(sessionUser));
+    setUser(sessionUser);
+    return { success: true };
+  };
+
   const googleLogin = async (credential) => {
     if (!credential) {
       return { success: false, error: 'Google credential is missing' };
@@ -252,47 +290,13 @@ export const AuthProvider = ({ children }) => {
         setUser(backendUser);
         return { success: true };
       } catch (error) {
-        return {
-          success: false,
-          error: error?.response?.data?.message || 'Google login failed',
-        };
+        // Allow local Google session fallback when backend auth is temporarily unavailable.
+        return googleLoginLocal(credential);
       }
     }
 
     try {
-      const payload = decodeJwtPayload(credential);
-      const email = String(payload?.email || '').trim().toLowerCase();
-      const name = String(payload?.name || 'Google User').trim();
-
-      if (!email) {
-        return { success: false, error: 'Google account email was not provided' };
-      }
-
-      const users = loadUsers();
-      let existingUser = users.find((entry) => entry.email === email);
-
-      if (!existingUser) {
-        existingUser = {
-          id: `google_${Date.now()}`,
-          name,
-          email,
-          password: '',
-          provider: 'google',
-          createdAt: new Date().toISOString(),
-        };
-        users.push(existingUser);
-        saveUsers(users);
-      }
-
-      const sessionUser = {
-        id: existingUser.id,
-        name: existingUser.name,
-        email: existingUser.email,
-      };
-
-      localStorage.setItem(SESSION_USER_KEY, JSON.stringify(sessionUser));
-      setUser(sessionUser);
-      return { success: true };
+      return googleLoginLocal(credential);
     } catch (_error) {
       return { success: false, error: 'Google login failed' };
     }

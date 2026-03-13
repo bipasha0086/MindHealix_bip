@@ -7,6 +7,7 @@ from datetime import datetime
 import base64
 import json
 import re
+from threading import Lock
 from urllib import parse
 from urllib import error, request as urllib_request
 
@@ -36,6 +37,10 @@ _DEFAULT_PROFILE = {
     "blocked_topics": [],
     "custom_block_keywords": [],
 }
+
+_ACTIVITY_FALLBACK = []
+_WARNING_EVENTS_FALLBACK = []
+_FALLBACK_LOCK = Lock()
 
 
 def _safe_object_id(value):
@@ -571,44 +576,50 @@ def _compose_alternative_suggestions(sentiment_compound, risk_level):
 
 def _store_warning_event(payload):
     """Persist each warning/block event to youtube_guard_warnings collection."""
+    doc = {
+        "video_id": _safe_str(payload.get("video_id")),
+        "page_url": _safe_str(payload.get("page_url")),
+        "title": _safe_str(payload.get("title")),
+        "channel": _safe_str(payload.get("channel")),
+        "risk_level": _safe_str(payload.get("risk_level")),
+        "warning_count": int(payload.get("warning_count") or 0),
+        "warning_limit": int(payload.get("warning_limit") or 0),
+        "event_type": _safe_str(payload.get("event_type") or "blocked"),
+        "created_at": datetime.utcnow(),
+    }
+
     try:
-        mongo.db.youtube_guard_warnings.insert_one(
-            {
-                "video_id": _safe_str(payload.get("video_id")),
-                "page_url": _safe_str(payload.get("page_url")),
-                "title": _safe_str(payload.get("title")),
-                "channel": _safe_str(payload.get("channel")),
-                "risk_level": _safe_str(payload.get("risk_level")),
-                "warning_count": int(payload.get("warning_count") or 0),
-                "warning_limit": int(payload.get("warning_limit") or 0),
-                "event_type": _safe_str(payload.get("event_type") or "blocked"),
-                "created_at": datetime.utcnow(),
-            }
-        )
+        mongo.db.youtube_guard_warnings.insert_one(doc)
     except Exception:
-        pass
+        doc.pop("_id", None)
+        with _FALLBACK_LOCK:
+            _WARNING_EVENTS_FALLBACK.insert(0, doc)
+            del _WARNING_EVENTS_FALLBACK[500:]
 
 
 def _store_activity(payload, response_payload):
+    doc = {
+        "video_id": _safe_str(payload.get("video_id")),
+        "page_url": _safe_str(payload.get("page_url")),
+        "title": _safe_str(payload.get("title")),
+        "channel": _safe_str(payload.get("channel")),
+        "risk_level": response_payload.get("risk_level"),
+        "risk_score": response_payload.get("risk_score"),
+        "action": response_payload.get("action"),
+        "signals": response_payload.get("detected_signals", []),
+        "semantic": response_payload.get("semantic"),
+        "profile_applied": response_payload.get("profile_applied", {}),
+        "created_at": datetime.utcnow(),
+    }
+
     try:
-        mongo.db.youtube_guard_activity.insert_one(
-            {
-                "video_id": _safe_str(payload.get("video_id")),
-                "page_url": _safe_str(payload.get("page_url")),
-                "title": _safe_str(payload.get("title")),
-                "channel": _safe_str(payload.get("channel")),
-                "risk_level": response_payload.get("risk_level"),
-                "risk_score": response_payload.get("risk_score"),
-                "action": response_payload.get("action"),
-                "signals": response_payload.get("detected_signals", []),
-                "semantic": response_payload.get("semantic"),
-                "profile_applied": response_payload.get("profile_applied", {}),
-                "created_at": datetime.utcnow(),
-            }
-        )
+        mongo.db.youtube_guard_activity.insert_one(doc)
     except Exception:
         # Keep endpoint non-blocking if DB write fails.
-        return
+        doc.pop("_id", None)
+        with _FALLBACK_LOCK:
+            _ACTIVITY_FALLBACK.insert(0, doc)
+            del _ACTIVITY_FALLBACK[500:]
 
 
 @youtube_guard_bp.route("/youtube/analyze-content", methods=["POST"])
@@ -680,7 +691,15 @@ def youtube_activity_summary():
             mongo.db.youtube_guard_activity.find({}, {"_id": 0}).sort("created_at", -1).limit(limit)
         )
     except Exception:
-        docs = []
+        with _FALLBACK_LOCK:
+            docs = list(_ACTIVITY_FALLBACK[:limit])
+
+    if not docs:
+        with _FALLBACK_LOCK:
+            docs = list(_ACTIVITY_FALLBACK[:limit])
+
+    for doc in docs:
+        doc.pop("_id", None)
 
     high_count = sum(1 for item in docs if item.get("risk_level") == "high")
     medium_count = sum(1 for item in docs if item.get("risk_level") == "medium")
@@ -796,6 +815,16 @@ def youtube_warning_events():
             if isinstance(doc.get("created_at"), datetime):
                 doc["created_at"] = doc["created_at"].isoformat()
     except Exception:
-        docs = []
+        with _FALLBACK_LOCK:
+            docs = list(_WARNING_EVENTS_FALLBACK[:limit])
+
+    if not docs:
+        with _FALLBACK_LOCK:
+            docs = list(_WARNING_EVENTS_FALLBACK[:limit])
+
+    for doc in docs:
+        doc.pop("_id", None)
+        if isinstance(doc.get("created_at"), datetime):
+            doc["created_at"] = doc["created_at"].isoformat()
 
     return jsonify({"events": docs, "total": len(docs)}), 200
