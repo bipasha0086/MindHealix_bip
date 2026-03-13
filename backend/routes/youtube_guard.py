@@ -117,8 +117,18 @@ def _twilio_request(method, url, payload, sid, token, timeout=12):
         },
         method=method,
     )
-    with urllib_request.urlopen(req, timeout=timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            body = ""
+        details = f"HTTP {exc.code}"
+        if body:
+            details = f"{details}: {body}"
+        raise RuntimeError(details) from exc
 
 
 def _send_twilio_threshold_alert(payload):
@@ -156,24 +166,31 @@ def _send_twilio_threshold_alert(payload):
     if event_type == "warning":
         limit_part = f" of {warning_limit}" if warning_limit else ""
         message_text = (
-            f"\u26a0\ufe0f MindHealix Warning {warning_count}{limit_part}\n"
+            f"\u26a0\ufe0f MindHealix Safety Warning {warning_count}{limit_part}\n"
+            "User is watching potentially inappropriate or high-risk content.\n"
             f"Risk: {risk_level}\n"
-            f"Title: {title}\n"
+            f"Video: {title}\n"
             f"Channel: {channel}\n"
-            f"URL: {page_url}"
+            f"Link: {page_url}"
         )
     else:
         message_text = (
-            f"\U0001f6ab MindHealix BLOCKED after {warning_count} warning(s).\n"
+            f"\U0001f6ab MindHealix ALERT: Content blocked after {warning_count} warning(s).\n"
+            "User is watching inappropriate or high-risk content.\n"
             f"Risk: {risk_level}\n"
-            f"Title: {title}\n"
+            f"Video: {title}\n"
             f"Channel: {channel}\n"
-            f"URL: {page_url}"
+            f"Link: {page_url}\n"
+            "Please check in with the user immediately."
         )
 
     channels_raw = _safe_str(current_app.config.get("TWILIO_ALERT_CHANNELS", "whatsapp"))
     channels = [item.strip().lower() for item in channels_raw.split(",") if item.strip()]
     channels = channels or ["whatsapp"]
+    whatsapp_content_sid = _safe_str(
+        current_app.config.get("TWILIO_WHATSAPP_CONTENT_SID")
+        or current_app.config.get("TWILIO_CONTENT_SID")
+    )
 
     base_url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}"
     results = []
@@ -183,14 +200,26 @@ def _send_twilio_threshold_alert(payload):
         if not whatsapp_from.startswith("whatsapp:"):
             whatsapp_from = f"whatsapp:{whatsapp_from}"
         try:
+            wa_payload = {
+                "From": whatsapp_from,
+                "To": f"whatsapp:{to_phone}",
+            }
+
+            if whatsapp_content_sid:
+                # Template variables are mapped to placeholders such as {{1}}, {{2}} in Twilio Content templates.
+                template_vars = {
+                    "1": datetime.utcnow().strftime("%d/%m/%Y"),
+                    "2": datetime.utcnow().strftime("%I:%M %p UTC"),
+                }
+                wa_payload["ContentSid"] = whatsapp_content_sid
+                wa_payload["ContentVariables"] = json.dumps(template_vars)
+            else:
+                wa_payload["Body"] = message_text
+
             wa_result = _twilio_request(
                 "POST",
                 f"{base_url}/Messages.json",
-                {
-                    "From": whatsapp_from,
-                    "To": f"whatsapp:{to_phone}",
-                    "Body": message_text,
-                },
+                wa_payload,
                 sid,
                 token,
             )
