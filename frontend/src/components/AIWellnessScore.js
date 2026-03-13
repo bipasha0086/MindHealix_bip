@@ -14,7 +14,7 @@ const AIWellnessScore = ({ moodData, stressLevel, sleepHours, journalActivity })
     // Animate score counting
     let start = 0;
     const end = score;
-    const duration = 2000;
+    const duration = 600;
     const increment = end / (duration / 16);
 
     const timer = setInterval(() => {

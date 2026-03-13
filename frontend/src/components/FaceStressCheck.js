@@ -177,91 +177,181 @@ const FaceStressCheck = ({ onResult }) => {
     }
   };
 
+  const stressColor = (level) => {
+    if (!level) return { bg: 'bg-slate-200', text: 'text-slate-600', bar: 'bg-slate-400' };
+    const l = String(level).toLowerCase();
+    if (l === 'low')    return { bg: 'bg-emerald-100', text: 'text-emerald-700', bar: 'bg-emerald-500' };
+    if (l === 'medium') return { bg: 'bg-amber-100',   text: 'text-amber-700',   bar: 'bg-amber-500' };
+    return                     { bg: 'bg-rose-100',    text: 'text-rose-700',    bar: 'bg-rose-500' };
+  };
+
+  const probEntries = result?.class_probabilities ? Object.entries(result.class_probabilities) : [];
+
   return (
-    <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
-        <h3 className="text-lg font-bold text-slate-900">Face Stress Check (Experimental)</h3>
-        <span className="text-xs font-semibold px-2 py-1 rounded-md bg-white border border-cyan-200 text-cyan-700">
-          Camera frame + fallback signals
-        </span>
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-cyan-50 to-sky-50">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">📷</span>
+          <h3 className="text-sm font-bold text-slate-800">Face Stress Check</h3>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 font-medium border border-cyan-200">Experimental</span>
+        </div>
+        {cameraOn && (
+          <span className="flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+            Live
+          </span>
+        )}
       </div>
 
-      <p className="text-sm text-slate-600 mb-3">
-        The current camera frame is used for experimental stress classification. If the ML model is unavailable,
-        expression-based fallback scoring is used.
-      </p>
+      <div className="p-4">
+        {/* Square camera viewport */}
+        <div className="relative mx-auto mb-4" style={{ width: '100%', maxWidth: '220px', aspectRatio: '1 / 1' }}>
+          <div className="absolute inset-0 rounded-xl overflow-hidden bg-slate-950 border-2 border-slate-700 shadow-inner">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+              style={{ display: cameraOn ? 'block' : 'none', width: '100%', height: '100%' }}
+            />
+            <canvas ref={canvasRef} className="hidden" />
 
-      <label className="flex items-start gap-2 text-sm text-slate-700 mb-3">
-        <input
-          type="checkbox"
-          checked={consented}
-          onChange={(e) => setConsented(e.target.checked)}
-          className="mt-1"
-        />
-        <span>I consent to temporary camera-based wellness analysis for this session.</span>
-      </label>
+            {/* Placeholder when camera is off */}
+            {!cameraOn && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <div className="w-20 h-20 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center">
+                  <span className="text-3xl opacity-60">🧑</span>
+                </div>
+                <p className="text-xs text-slate-500 text-center px-4">Camera preview will appear here</p>
+              </div>
+            )}
 
-      <div className="rounded-xl overflow-hidden border border-slate-200 bg-black/90 mb-3">
-        <video ref={videoRef} autoPlay playsInline muted className="w-full h-56 object-cover" />
-        <canvas ref={canvasRef} className="hidden" />
-      </div>
+            {/* Analyzing overlay */}
+            {analyzing && (
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2">
+                <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+                <span className="text-xs text-white font-semibold">Analyzing…</span>
+              </div>
+            )}
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        {!cameraOn ? (
+            {/* Corner brackets for a modern scanner look */}
+            {cameraOn && !analyzing && (
+              <>
+                <div className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2 border-cyan-400 rounded-tl-sm pointer-events-none" />
+                <div className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 border-cyan-400 rounded-tr-sm pointer-events-none" />
+                <div className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 border-cyan-400 rounded-bl-sm pointer-events-none" />
+                <div className="absolute bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 border-cyan-400 rounded-br-sm pointer-events-none" />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Consent */}
+        <label className="flex items-start gap-2 text-xs text-slate-600 mb-4 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={consented}
+            onChange={(e) => setConsented(e.target.checked)}
+            className="mt-0.5 accent-cyan-600"
+          />
+          <span>I consent to temporary camera-based wellness analysis for this session only.</span>
+        </label>
+
+        {/* Controls */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {!cameraOn ? (
+            <button
+              type="button"
+              onClick={startCamera}
+              disabled={loadingModel || !consented}
+              className="col-span-1 px-3 py-2 rounded-lg bg-sky-600 text-white text-xs font-semibold disabled:opacity-50 hover:bg-sky-700 transition-colors"
+            >
+              {loadingModel ? '⏳ Loading…' : '▶ Start Camera'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={stopCamera}
+              className="col-span-1 px-3 py-2 rounded-lg bg-slate-700 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
+            >
+              ⏹ Stop
+            </button>
+          )}
           <button
             type="button"
-            onClick={startCamera}
-            disabled={loadingModel}
-            className="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold disabled:opacity-60"
+            onClick={analyzeFrame}
+            disabled={!cameraOn || analyzing || loadingModel}
+            className="col-span-1 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50 hover:bg-emerald-700 transition-colors"
           >
-            {loadingModel ? 'Loading model...' : 'Start Camera'}
+            {analyzing ? '⌛ Scanning…' : '🔍 Analyze Frame'}
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={stopCamera}
-            className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-semibold"
-          >
-            Stop Camera
-          </button>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">{error}</div>
         )}
 
-        <button
-          type="button"
-          onClick={analyzeFrame}
-          disabled={!cameraOn || analyzing || loadingModel}
-          className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold disabled:opacity-60"
-        >
-          {analyzing ? 'Analyzing...' : 'Analyze Current Frame'}
-        </button>
-      </div>
+        {/* Result */}
+        {result && (() => {
+          const sc = stressColor(result.stress_level);
+          return (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500 font-medium">Facial Stress Estimate</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${sc.bg} ${sc.text}`}>
+                  {result.stress_level}
+                </span>
+              </div>
 
-      {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2 mb-2">{error}</div>}
+              {/* Confidence bar */}
+              <div>
+                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                  <span>Confidence</span>
+                  <span className="font-semibold">{Math.round((result.confidence || 0) * 100)}%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-1.5 rounded-full ${sc.bar} transition-all duration-500`}
+                    style={{ width: `${Math.round((result.confidence || 0) * 100)}%` }}
+                  />
+                </div>
+              </div>
 
-      {result && (
-        <div className="rounded-xl border border-emerald-200 bg-white p-3">
-          <div className="text-sm text-slate-600">Facial Stress Estimate</div>
-          <div className="flex items-center gap-3 mt-1">
-            <span className="text-xl font-bold text-slate-900">{result.stress_level}</span>
-            <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-700">
-              Confidence {Math.round((result.confidence || 0) * 100)}%
-            </span>
-            <span className="text-xs px-2 py-1 rounded bg-cyan-100 text-cyan-700">{result.prediction_source}</span>
-          </div>
-          {result.stress_label && <div className="text-xs text-slate-600 mt-2">Model label: {result.stress_label}</div>}
-          {result.class_probabilities && (
-            <div className="text-xs text-slate-600 mt-1">
-              Probabilities:{' '}
-              {Object.entries(result.class_probabilities)
-                .map(([key, value]) => `${key} ${Math.round(Number(value) * 100)}%`)
-                .join(' | ')}
+              {/* Probability bars */}
+              {probEntries.length > 0 && (
+                <div className="space-y-1.5">
+                  {probEntries.map(([key, val]) => (
+                    <div key={key}>
+                      <div className="flex justify-between text-xs text-slate-500 mb-0.5">
+                        <span className="capitalize">{key}</span>
+                        <span>{Math.round(Number(val) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-1.5 rounded-full transition-all duration-500 ${stressColor(key).bar}`}
+                          style={{ width: `${Math.round(Number(val) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-700 font-medium">{result.prediction_source}</span>
+                {result.stress_label && (
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">{result.stress_label}</span>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-400">Wellness indicator only — not a clinical diagnosis.</p>
             </div>
-          )}
-          <p className="text-xs text-slate-500 mt-2">
-            This is a wellness indicator, not a clinical diagnosis.
-          </p>
-        </div>
-      )}
+          );
+        })()}
+      </div>
     </div>
   );
 };

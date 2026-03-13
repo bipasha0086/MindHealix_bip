@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { analyticsAPI, emergencyAPI } from '../services/api';
+import { Link } from 'react-router-dom';
+import { analyticsAPI } from '../services/api';
 import AIWellnessScore from '../components/AIWellnessScore';
-import PanicButton from '../components/PanicButton';
-import VoicePanicTrigger from '../components/VoicePanicTrigger';
+import RelaxationSounds from '../components/RelaxationSounds';
 
 const POSITIVE_THOUGHTS = [
   'Small progress is still progress. Keep going.',
@@ -22,33 +21,50 @@ const WELLNESS_ARTICLES = [
     readTime: '3 min read',
     topic: 'Breathing',
     summary: 'Use box breathing to quickly reduce stress response before meetings or study sessions.',
+    content: [
+      'Start with box breathing: inhale for 4 seconds, hold for 4, exhale for 4, and hold for 4 again. Repeat this cycle for 2 to 5 minutes.',
+      'Keep your shoulders relaxed and place both feet on the floor so your body gets a clear signal that you are safe.',
+      'If your thoughts are racing, count each phase softly in your head. This gives your brain a simple task and reduces panic momentum.',
+      'Use this reset before class, meetings, exams, or whenever your body feels overstimulated.',
+    ],
   },
   {
     title: 'How Sleep and Mood Affect Each Other',
     readTime: '4 min read',
     topic: 'Sleep',
     summary: 'Understand the sleep-stress cycle and simple habits to improve emotional stability.',
+    content: [
+      'Poor sleep increases emotional sensitivity, stress reactivity, and mental fatigue. That is why even small sleep loss can make the next day feel heavier.',
+      'A stable sleep window matters more than trying to sleep perfectly. Aim to sleep and wake around the same time each day.',
+      'Reduce bright screens 30 to 60 minutes before bed, avoid heavy meals late at night, and keep your room cool and quiet.',
+      'If you sleep badly one night, focus on recovery habits the next day instead of judging yourself for it.',
+    ],
   },
   {
     title: 'Micro Journaling for Busy Days',
     readTime: '2 min read',
     topic: 'Journaling',
     summary: 'Even a 2-line journal note helps your brain process emotions and reduce overwhelm.',
+    content: [
+      'Micro journaling works because it lowers the effort needed to reflect. You do not need a perfect entry to benefit.',
+      'Try this format: 1) What happened today? 2) How do I feel about it? 3) What do I need next?',
+      'When days are overloaded, write only two honest lines. Clarity is more valuable than length.',
+      'This habit builds emotional awareness over time and makes patterns easier to notice.',
+    ],
   },
 ];
 
 const DashboardPage = () => {
-  const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [thought, setThought] = useState('');
-  const [contact, setContact] = useState({ name: '', relation: '', phone: '' });
-  const [contactSaved, setContactSaved] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState(null);
 
   useEffect(() => {
     fetchDashboard();
     setThought(POSITIVE_THOUGHTS[Math.floor(Math.random() * POSITIVE_THOUGHTS.length)]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -59,28 +75,8 @@ const DashboardPage = () => {
         return POSITIVE_THOUGHTS[(current + 1) % POSITIVE_THOUGHTS.length];
       });
     }, 25000);
-
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (!dashboard?.user?.id) return;
-    emergencyAPI
-      .getEmergencyContact()
-      .then((response) => {
-        const loadedContact = response?.data?.contact;
-        if (!loadedContact) return;
-
-        setContact({
-          name: loadedContact.name || '',
-          relation: loadedContact.relation || '',
-          phone: loadedContact.phone || '',
-        });
-      })
-      .catch((error) => {
-        console.error('Failed to load emergency contact:', error);
-      });
-  }, [dashboard?.user?.id]);
 
   const fetchDashboard = async () => {
     try {
@@ -96,16 +92,6 @@ const DashboardPage = () => {
     }
   };
 
-  const saveEmergencyContact = async () => {
-    if (!dashboard?.user?.id) return;
-    try {
-      await emergencyAPI.saveEmergencyContact(contact);
-      setContactSaved(true);
-      setTimeout(() => setContactSaved(false), 1500);
-    } catch (error) {
-      console.error('Failed to save emergency contact:', error);
-    }
-  };
 
   const aiRecommendation = useMemo(() => {
     const entries = dashboard?.recent_entries || [];
@@ -131,10 +117,52 @@ const DashboardPage = () => {
     return 'You are stable right now. Maintain consistency with mood tracking and short daily reflection.';
   }, [dashboard]);
 
+  const todayReset = useMemo(() => {
+    const avgStress = Number(dashboard?.statistics?.average_stress_score || 0);
+    const latestMood = dashboard?.recent_entries?.[0]?.mood || 'Neutral';
+
+    if (avgStress >= 70) {
+      return {
+        title: 'Today Reset',
+        badge: 'High Support Mode',
+        tone: 'rose',
+        tip: 'Keep your day small: one priority, one hydration break, one calming reset.',
+        actions: ['2-minute breathing', 'Text one trusted person', 'Journal 3 honest lines'],
+      };
+    }
+
+    if (latestMood === 'Happy' || latestMood === 'Excited') {
+      return {
+        title: 'Momentum Booster',
+        badge: 'Positive Energy',
+        tone: 'emerald',
+        tip: 'You have emotional energy today. Use it intentionally before it fades.',
+        actions: ['Capture one win', 'Plan one focused task', 'Protect tonight\'s sleep'],
+      };
+    }
+
+    return {
+      title: 'Gentle Focus',
+      badge: 'Balanced Mode',
+      tone: 'sky',
+      tip: 'Stay steady with one simple action that keeps your day grounded.',
+      actions: ['Drink water now', 'Take a 5-minute walk', 'Write one reflection note'],
+    };
+  }, [dashboard]);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div>
+      <div className="module-shell">
+        <div className="module-container animate-pulse space-y-6">
+          <div className="h-20 rounded-2xl bg-slate-100" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-xl bg-slate-100" />)}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-24 rounded-2xl bg-slate-100" />)}
+          </div>
+          <div className="h-40 rounded-2xl bg-slate-100" />
+        </div>
       </div>
     );
   }
@@ -202,123 +230,165 @@ const DashboardPage = () => {
   return (
     <div className="module-shell">
       <div className="module-container">
-        <div className="mb-6 module-header-card">
+
+        {/* ── Welcome Header ── */}
+        <div className="module-header-card mb-4">
           <h1 className="module-title">Welcome, {user?.name || 'Friend'} 👋</h1>
-          <p className="module-subtitle">Your main wellness modules and daily guidance are all here.</p>
+          <p className="module-subtitle">Your personal wellness overview — all modules in one place.</p>
         </div>
 
-        <div className="mb-8">
-          <h2 className="section-heading mb-4">Main Modules</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {modules.map((module) => (
-              <Link key={module.title} to={module.to} className={`h-full rounded-2xl border p-5 shadow-sm hover:shadow-md transition flex flex-col ${module.color}`}>
-                <div className="module-icon-badge">{module.icon}</div>
-                <h3 className="mt-3 text-lg font-bold text-slate-900">{module.title}</h3>
-                <p className="text-sm text-slate-600 mt-1">{module.subtitle}</p>
+        {/* ── Motivational Thought + Companion Card ── */}
+        <div className="grid lg:grid-cols-[1.45fr_0.95fr] gap-4 mb-6">
+          <div className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-cyan-50 px-6 py-6 shadow-sm hover:shadow-lg transition-all duration-300">
+            <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-emerald-100/70 blur-2xl" />
+            <div className="absolute bottom-0 left-10 h-24 w-24 rounded-full bg-cyan-100/70 blur-2xl" />
+            <div className="relative flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-2xl shadow-sm ring-1 ring-emerald-100">
+                💬
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">Daily Motivation</p>
+                    <h2 className="text-lg font-bold text-slate-900">Your Thought For Today</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setThought(POSITIVE_THOUGHTS[Math.floor(Math.random() * POSITIVE_THOUGHTS.length)])}
+                    className="rounded-xl border border-emerald-200 bg-white/90 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 hover:text-emerald-900 transition-colors"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <div className="max-w-2xl rounded-2xl bg-white/75 px-4 py-4 ring-1 ring-emerald-100 shadow-sm">
+                  <p className="text-xl sm:text-2xl font-bold text-slate-800 leading-9 tracking-tight">
+                    {thought}
+                  </p>
+                </div>
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-emerald-100">
+                  <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
+                  Refreshes automatically every 25 seconds
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-3xl border px-5 py-5 shadow-sm hover:shadow-lg transition-all duration-300 ${
+            todayReset.tone === 'rose'
+              ? 'border-rose-200 bg-gradient-to-br from-rose-50 to-orange-50'
+              : todayReset.tone === 'emerald'
+              ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-lime-50'
+              : 'border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50'
+          }`}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Companion Card</p>
+                <h3 className="text-lg font-bold text-slate-900 mt-1">{todayReset.title}</h3>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-[11px] font-bold ${
+                todayReset.tone === 'rose'
+                  ? 'bg-rose-100 text-rose-700'
+                  : todayReset.tone === 'emerald'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-sky-100 text-sky-700'
+              }`}>
+                {todayReset.badge}
+              </span>
+            </div>
+
+            <p className="text-sm leading-6 text-slate-700 mb-4">{todayReset.tip}</p>
+
+            <div className="space-y-2">
+              {todayReset.actions.map((action, index) => (
+                <div key={action} className="flex items-center gap-3 rounded-2xl bg-white/75 px-3 py-2 ring-1 ring-white/80">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm font-medium text-slate-700">{action}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Module Quick Access Row ── */}
+        <div className="mb-6">
+          <h2 className="section-heading mb-3">Your Modules</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {modules.map((mod) => (
+              <Link
+                key={mod.title}
+                to={mod.to}
+                className={`group rounded-3xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-sky-300 flex flex-col items-center justify-center text-center min-h-[140px] ${mod.color}`}
+              >
+                <div className="text-3xl mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">{mod.icon}</div>
+                <h3 className="text-sm font-bold text-slate-900 leading-snug group-hover:text-sky-800 transition-colors">{mod.title}</h3>
+                <p className="text-xs text-slate-500 mt-1 opacity-80">{mod.subtitle}</p>
               </Link>
             ))}
           </div>
         </div>
 
+        {/* ── KPI Stats Row ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'Total Entries',        value: statistics?.total_entries || 0 },
+            { label: 'Days Tracked',          value: statistics?.days_tracked || 0 },
+            { label: 'Avg Stress Score',      value: `${statistics?.average_stress_score || 0}/100` },
+            { label: 'Current Stress Level',  value: statistics?.current_stress_level || 'Low',
+              badge: true, level: statistics?.current_stress_level || 'low' },
+          ].map((stat) => (
+            <div key={stat.label} className="module-panel text-center">
+              <p className="text-xs text-slate-500 font-medium mb-1">{stat.label}</p>
+              {stat.badge ? (
+                <span className={`inline-block px-3 py-1 rounded-lg font-semibold text-sm stress-${String(stat.level).toLowerCase()}`}>
+                  {stat.value}
+                </span>
+              ) : (
+                <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ── Main Two-Column Layout ── */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
+
+          {/* Left / Main Column */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-2xl border border-rose-200 bg-white p-5 shadow-sm">
-              <h2 className="section-heading mb-3">Emergency Panic Support</h2>
-              <p className="text-sm text-slate-600 mb-4">If panic starts, press the button below for immediate breathing guidance and support chat.</p>
-              <PanicButton onActivate={() => navigate('/panic-mode')} />
-
-              <div className="grid sm:grid-cols-2 gap-3 mt-4">
-                <Link
-                  to="/panic-mode"
-                  className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800 hover:bg-sky-100"
-                >
-                  Open Breathing Exercises
-                </Link>
-                <Link
-                  to="/panic-mode"
-                  className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
-                >
-                  Open AI Chat Support
-                </Link>
-              </div>
-
-              <div className="mt-4">
-                <VoicePanicTrigger onDetected={() => navigate('/panic-mode')} />
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="module-section-title-tight mb-0">Motivational Thought</h3>
-                <button
-                  type="button"
-                  onClick={() => setThought(POSITIVE_THOUGHTS[Math.floor(Math.random() * POSITIVE_THOUGHTS.length)])}
-                  className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                >
-                  Refresh Thought
-                </button>
-              </div>
-              <p className="text-slate-800 mt-3 leading-relaxed">{thought}</p>
-              <p className="text-xs text-emerald-700 mt-2">Auto-refreshes every 25 seconds.</p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4 items-stretch">
-              <div className="module-panel h-full flex flex-col justify-between">
-                <div className="module-kpi">Total Entries</div>
-                <div className="module-kpi-value">{statistics?.total_entries || 0}</div>
-              </div>
-              <div className="module-panel h-full flex flex-col justify-between">
-                <div className="module-kpi">Days Tracked</div>
-                <div className="module-kpi-value">{statistics?.days_tracked || 0}</div>
-              </div>
-              <div className="module-panel h-full flex flex-col justify-between">
-                <div className="module-kpi">Current Stress Level</div>
-                <div className={`inline-block px-3 py-1 rounded-lg mt-2 font-semibold stress-${String(statistics?.current_stress_level || 'low').toLowerCase()}`}>
-                  {statistics?.current_stress_level || 'Low'}
-                </div>
-              </div>
-              <div className="module-panel h-full flex flex-col justify-between">
-                <div className="module-kpi">Average Stress Score</div>
-                <div className="module-kpi-value">{statistics?.average_stress_score || 0}/100</div>
-              </div>
-            </div>
-
+            {/* AI Recommendation */}
             <div className="module-panel">
-              <h3 className="module-section-title-tight">AI Recommendations</h3>
-              <p className="text-slate-700">{aiRecommendation}</p>
+              <h3 className="module-section-title-tight mb-2">🤖 AI Recommendation</h3>
+              <p className="text-slate-700 text-sm leading-relaxed">{aiRecommendation}</p>
             </div>
 
+            {/* Recent Stress Entries */}
             <div className="module-panel">
               <h3 className="module-section-title mb-4">Recent Stress Entries</h3>
               {recent_entries && recent_entries.length > 0 ? (
                 <div className="space-y-3">
-                  {recent_entries.map((entry) => (
-                    <div key={entry.id} className="rounded-xl border border-slate-200 p-4">
+                  {recent_entries.slice(0, 5).map((entry) => (
+                    <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="flex flex-wrap items-center gap-2 justify-between">
                         <div className="flex items-center gap-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold mood-${entry.mood.toLowerCase()}`}>{entry.mood}</span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold stress-${entry.stress_level.toLowerCase()}`}>{entry.stress_level}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold mood-${entry.mood.toLowerCase()}`}>{entry.mood}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold stress-${entry.stress_level.toLowerCase()}`}>{entry.stress_level}</span>
                         </div>
-                        <span className="text-sm text-slate-500">{entry.date}</span>
+                        <span className="text-xs text-slate-500">{entry.date}</span>
                       </div>
-                      <div className="text-sm text-slate-700 mt-2">
-                        Stress Score: <span className="font-semibold">{entry.stress_score ?? '-'}/100</span> | Sleep: {entry.sleep_hours}h | Sentiment: {Number(entry.sentiment_score || 0).toFixed(2)}
-                      </div>
-                      <div className="mt-2 text-xs text-slate-600">
-                        AI Engine:{' '}
-                        <span
-                          className={`px-2 py-0.5 rounded-md font-semibold ${
-                            entry.prediction_source === 'ml_model'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : entry.prediction_source === 'rule_based_fallback'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-200 text-slate-700'
-                          }`}
-                        >
-                          {entry.prediction_source === 'ml_model'
-                            ? 'Trained ML Model'
+                      <div className="text-xs text-slate-600 mt-1.5 flex flex-wrap gap-3">
+                        <span>Score <strong>{entry.stress_score ?? '—'}/100</strong></span>
+                        <span>Sleep <strong>{entry.sleep_hours}h</strong></span>
+                        <span>Sentiment <strong>{Number(entry.sentiment_score || 0).toFixed(2)}</strong></span>
+                        <span className={`px-2 py-0.5 rounded-md font-semibold ${
+                          entry.prediction_source === 'ml_model'
+                            ? 'bg-emerald-100 text-emerald-800'
                             : entry.prediction_source === 'rule_based_fallback'
-                            ? 'Fallback Rules'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          {entry.prediction_source === 'ml_model' ? 'ML Model'
+                            : entry.prediction_source === 'rule_based_fallback' ? 'Fallback'
                             : 'Local AI'}
                         </span>
                       </div>
@@ -326,83 +396,100 @@ const DashboardPage = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-600">No entries yet. Track mood to start personalized scoring.</p>
+                <p className="text-sm text-slate-500">No entries yet. Track your mood to start personalized scoring.</p>
               )}
             </div>
 
+            {/* Wellness Articles */}
             <div>
-              <h3 className="section-heading">Recommended Articles</h3>
-              <p className="section-subheading">Practical and short reads to support your daily wellbeing.</p>
-              <div className="grid md:grid-cols-3 gap-4 mt-4 items-stretch">
+              <h3 className="section-heading mb-1">Recommended Reads</h3>
+              <p className="section-subheading mb-3">Short articles to support your day. Click any card to read the full article.</p>
+              <div className="grid md:grid-cols-3 gap-4">
                 {WELLNESS_ARTICLES.map((article) => (
-                  <article key={article.title} className="feature-glass rounded-2xl p-4 h-full flex flex-col">
+                  <button
+                    key={article.title}
+                    type="button"
+                    onClick={() => setSelectedArticle(article)}
+                    className="feature-glass rounded-2xl p-4 flex flex-col text-left border border-cyan-100 hover:-translate-y-1 hover:shadow-xl hover:border-cyan-300 hover:bg-white transition-all duration-200 group"
+                  >
                     <div className="flex items-center justify-between text-xs mb-2">
-                      <span className="px-2 py-1 rounded-md bg-cyan-100 text-cyan-800 font-semibold">{article.topic}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-800 font-semibold">{article.topic}</span>
                       <span className="text-slate-500">{article.readTime}</span>
                     </div>
-                    <h4 className="font-bold text-slate-900 leading-snug">{article.title}</h4>
-                    <p className="text-sm text-slate-600 mt-2 flex-1">{article.summary}</p>
-                  </article>
+                    <h4 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-cyan-800 transition-colors">{article.title}</h4>
+                    <p className="text-xs text-slate-600 mt-2 flex-1">{article.summary}</p>
+                    <div className="mt-4 flex items-center justify-between text-xs font-semibold text-cyan-700">
+                      <span>Read full article</span>
+                      <span className="transition-transform group-hover:translate-x-1">→</span>
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
+
+            {/* Relaxation Sound Player */}
+            <RelaxationSounds stressLevel={latest_entry?.stress_level || statistics?.current_stress_level} />
           </div>
 
+          {/* Right Sidebar */}
           <div className="space-y-6">
+
+            {/* AI Wellness Score */}
             <AIWellnessScore
               moodData={latest_entry?.mood || recent_entries?.[0]?.mood}
               stressLevel={latest_entry?.stress_level || statistics?.current_stress_level}
               sleepHours={Number(latest_entry?.sleep_hours ?? recent_entries?.[0]?.sleep_hours ?? 7)}
-              journalActivity={Boolean(latest_entry?.has_journal || recent_entries?.some((entry) => entry?.has_journal))}
+              journalActivity={Boolean(latest_entry?.has_journal || recent_entries?.some((e) => e?.has_journal))}
             />
 
-            <div className="module-panel border-rose-200">
-              <h3 className="module-section-title">Emergency Contact</h3>
-              <p className="text-xs text-slate-600 mb-3">Add one trusted person for quick support in high-stress moments.</p>
+            {/* Quick Panic Link */}
+            <Link
+              to="/panic-mode"
+              className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 hover:bg-rose-100 transition-colors"
+            >
+              <span className="text-xl">🆘</span>
+              <div>
+                <p className="text-sm font-bold text-rose-800">Need Help Right Now?</p>
+                <p className="text-xs text-rose-600">Open Panic Mode — breathing & AI support</p>
+              </div>
+              <span className="ml-auto text-rose-400 text-lg">→</span>
+            </Link>
 
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  value={contact.name}
-                  onChange={(e) => setContact((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Contact name"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-100"
-                />
-                <input
-                  type="text"
-                  value={contact.relation}
-                  onChange={(e) => setContact((prev) => ({ ...prev, relation: e.target.value }))}
-                  placeholder="Relation (Friend, Parent, Partner)"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-100"
-                />
-                <input
-                  type="text"
-                  value={contact.phone}
-                  onChange={(e) => setContact((prev) => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Phone number"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-100"
-                />
+          </div>
+        </div>
 
+        {selectedArticle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+            <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl border border-slate-200 max-h-[85vh] overflow-hidden">
+              <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-slate-100 bg-slate-50">
+                <div>
+                  <div className="flex items-center gap-2 text-xs mb-2">
+                    <span className="px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-800 font-semibold">{selectedArticle.topic}</span>
+                    <span className="text-slate-500">{selectedArticle.readTime}</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 leading-snug">{selectedArticle.title}</h3>
+                </div>
                 <button
                   type="button"
-                  onClick={saveEmergencyContact}
-                  className="w-full module-btn-danger"
+                  onClick={() => setSelectedArticle(null)}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
                 >
-                  Save Contact
+                  Close
                 </button>
+              </div>
 
-                {contactSaved && <p className="text-xs text-emerald-700">Saved successfully.</p>}
-
-                <Link
-                  to="/emergency-support"
-                  className="block text-center w-full rounded-lg border border-rose-200 bg-rose-50 text-rose-700 py-2 text-sm font-semibold hover:bg-rose-100"
-                >
-                  Open Emergency Module
-                </Link>
+              <div className="px-6 py-5 overflow-y-auto max-h-[calc(85vh-104px)] space-y-4">
+                <p className="text-sm text-slate-600 leading-relaxed">{selectedArticle.summary}</p>
+                {selectedArticle.content.map((paragraph) => (
+                  <p key={paragraph} className="text-sm text-slate-700 leading-7">
+                    {paragraph}
+                  </p>
+                ))}
               </div>
             </div>
           </div>
-        </div>
+        )}
+
       </div>
     </div>
   );
