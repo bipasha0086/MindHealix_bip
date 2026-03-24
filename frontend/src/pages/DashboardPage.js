@@ -5,14 +5,18 @@ import AIWellnessScore from '../components/AIWellnessScore';
 import RelaxationSounds from '../components/RelaxationSounds';
 
 const POSITIVE_THOUGHTS = [
-  'Small progress is still progress. Keep going.',
-  'You are allowed to rest and still be successful.',
-  'Your feelings are valid, and they will change with time and care.',
-  'One healthy choice today can shift your whole week.',
-  'You are stronger than this moment of stress.',
-  'Consistency beats intensity. Keep showing up for yourself.',
-  'Your mental health is a priority, not an afterthought.',
-  'You can restart your day at any moment with one mindful action.',
+  'Your heart matters. Be as kind to yourself as you would be to someone you love.',
+  'It\'s okay to not be okay. What matters is that you\'re here, trying.',
+  'You are enough, just as you are right now—struggles and all.',
+  'Healing isn\'t linear. Every small step forward is a victory worth celebrating.',
+  'You deserve rest without guilt, joy without question, and peace without earning it.',
+  'Your pain is real, and so is your strength to carry it.',
+  'Being vulnerable isn\'t weakness—it\'s the bravest thing you can do.',
+  'You are the author of your story. Today is a chance to write a kind chapter.',
+  'Some days you\'ll be the ocean. Some days you\'ll be the sand. Both are necessary.',
+  'You don\'t have to see the full staircase to take the first step.',
+  'Your presence in this world matters more than you know.',
+  'Healing happens when you stop fighting yourself and start believing in your worth.',
 ];
 
 const WELLNESS_ARTICLES = [
@@ -21,6 +25,7 @@ const WELLNESS_ARTICLES = [
     readTime: '3 min read',
     topic: 'Breathing',
     summary: 'Use box breathing to quickly reduce stress response before meetings or study sessions.',
+    googleSearchUrl: 'https://www.google.com/search?q=box+breathing+stress+relief+technique',
     content: [
       'Start with box breathing: inhale for 4 seconds, hold for 4, exhale for 4, and hold for 4 again. Repeat this cycle for 2 to 5 minutes.',
       'Keep your shoulders relaxed and place both feet on the floor so your body gets a clear signal that you are safe.',
@@ -33,6 +38,7 @@ const WELLNESS_ARTICLES = [
     readTime: '4 min read',
     topic: 'Sleep',
     summary: 'Understand the sleep-stress cycle and simple habits to improve emotional stability.',
+    googleSearchUrl: 'https://www.google.com/search?q=sleep+quality+mental+health+mood+connection',
     content: [
       'Poor sleep increases emotional sensitivity, stress reactivity, and mental fatigue. That is why even small sleep loss can make the next day feel heavier.',
       'A stable sleep window matters more than trying to sleep perfectly. Aim to sleep and wake around the same time each day.',
@@ -45,6 +51,7 @@ const WELLNESS_ARTICLES = [
     readTime: '2 min read',
     topic: 'Journaling',
     summary: 'Even a 2-line journal note helps your brain process emotions and reduce overwhelm.',
+    googleSearchUrl: 'https://www.google.com/search?q=journaling+for+mental+health+emotional+processing',
     content: [
       'Micro journaling works because it lowers the effort needed to reflect. You do not need a perfect entry to benefit.',
       'Try this format: 1) What happened today? 2) How do I feel about it? 3) What do I need next?',
@@ -60,6 +67,7 @@ const DashboardPage = () => {
   const [error, setError] = useState('');
   const [thought, setThought] = useState('');
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [articlesRefreshKey, setArticlesRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchDashboard();
@@ -74,7 +82,14 @@ const DashboardPage = () => {
         if (current === -1) return POSITIVE_THOUGHTS[0];
         return POSITIVE_THOUGHTS[(current + 1) % POSITIVE_THOUGHTS.length];
       });
-    }, 25000);
+    }, 900000); // Refresh every 15 minutes
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setArticlesRefreshKey((prev) => prev + 1);
+    }, 900000); // Refresh articles every 15 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -267,7 +282,7 @@ const DashboardPage = () => {
                 </div>
                 <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-emerald-100">
                   <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-                  Refreshes automatically every 25 seconds
+                  Refreshes automatically every 15 minutes
                 </div>
               </div>
             </div>
@@ -356,73 +371,39 @@ const DashboardPage = () => {
 
           {/* Left / Main Column */}
           <div className="lg:col-span-2 space-y-6">
-            {/* AI Recommendation */}
-            <div className="module-panel">
-              <h3 className="module-section-title-tight mb-2">🤖 AI Recommendation</h3>
-              <p className="text-slate-700 text-sm leading-relaxed">{aiRecommendation}</p>
-            </div>
-
-            {/* Recent Stress Entries */}
-            <div className="module-panel">
-              <h3 className="module-section-title mb-4">Recent Stress Entries</h3>
-              {recent_entries && recent_entries.length > 0 ? (
-                <div className="space-y-3">
-                  {recent_entries.slice(0, 5).map((entry) => (
-                    <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="flex flex-wrap items-center gap-2 justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold mood-${entry.mood.toLowerCase()}`}>{entry.mood}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold stress-${entry.stress_level.toLowerCase()}`}>{entry.stress_level}</span>
-                        </div>
-                        <span className="text-xs text-slate-500">{entry.date}</span>
-                      </div>
-                      <div className="text-xs text-slate-600 mt-1.5 flex flex-wrap gap-3">
-                        <span>Score <strong>{entry.stress_score ?? '—'}/100</strong></span>
-                        <span>Sleep <strong>{entry.sleep_hours}h</strong></span>
-                        <span>Sentiment <strong>{Number(entry.sentiment_score || 0).toFixed(2)}</strong></span>
-                        <span className={`px-2 py-0.5 rounded-md font-semibold ${
-                          entry.prediction_source === 'ml_model'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : entry.prediction_source === 'rule_based_fallback'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-200 text-slate-700'
-                        }`}>
-                          {entry.prediction_source === 'ml_model' ? 'ML Model'
-                            : entry.prediction_source === 'rule_based_fallback' ? 'Fallback'
-                            : 'Local AI'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">No entries yet. Track your mood to start personalized scoring.</p>
-              )}
-            </div>
-
             {/* Wellness Articles */}
             <div>
               <h3 className="section-heading mb-1">Recommended Reads</h3>
               <p className="section-subheading mb-3">Short articles to support your day. Click any card to read the full article.</p>
               <div className="grid md:grid-cols-3 gap-4">
                 {WELLNESS_ARTICLES.map((article) => (
-                  <button
-                    key={article.title}
-                    type="button"
-                    onClick={() => setSelectedArticle(article)}
-                    className="feature-glass rounded-2xl p-4 flex flex-col text-left border border-cyan-100 hover:-translate-y-1 hover:shadow-xl hover:border-cyan-300 hover:bg-white transition-all duration-200 group"
-                  >
+                  <div key={article.title} className="feature-glass rounded-2xl p-4 flex flex-col text-left border border-cyan-100 hover:shadow-xl hover:border-cyan-300 hover:bg-white transition-all duration-200 group">
                     <div className="flex items-center justify-between text-xs mb-2">
                       <span className="px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-800 font-semibold">{article.topic}</span>
                       <span className="text-slate-500">{article.readTime}</span>
                     </div>
                     <h4 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-cyan-800 transition-colors">{article.title}</h4>
                     <p className="text-xs text-slate-600 mt-2 flex-1">{article.summary}</p>
-                    <div className="mt-4 flex items-center justify-between text-xs font-semibold text-cyan-700">
-                      <span>Read full article</span>
-                      <span className="transition-transform group-hover:translate-x-1">→</span>
+                    <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedArticle(article)}
+                        className="flex items-center gap-1 text-xs font-semibold text-cyan-700 hover:text-cyan-900 transition-colors"
+                      >
+                        Read here
+                        <span className="transition-transform group-hover:translate-x-1">→</span>
+                      </button>
+                      <a
+                        href={article.googleSearchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                      >
+                        <span>🔍</span>
+                        Google
+                      </a>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>

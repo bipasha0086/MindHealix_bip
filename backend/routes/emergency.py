@@ -107,6 +107,127 @@ def save_emergency_contact():
         }), 500
 
 
+@emergency_bp.route('/emergency-contact', methods=['DELETE'])
+@jwt_required()
+def delete_emergency_contact():
+    """Soft-delete emergency contact for current user with restore support."""
+    try:
+        current_user_id = get_jwt_identity()
+        user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+
+        if not user:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'User not found'
+            }), 404
+
+        existing_contact = _normalize_contact(user.get('emergency_contact'))
+        if not existing_contact:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'No emergency contact found to delete'
+            }), 404
+
+        result = mongo.db.users.update_one(
+            {'_id': ObjectId(current_user_id)},
+            {
+                '$unset': {'emergency_contact': ''},
+                '$set': {
+                    'deleted_emergency_contact': {
+                        'name': existing_contact.get('name', ''),
+                        'relation': existing_contact.get('relation', ''),
+                        'phone': existing_contact.get('phone', ''),
+                        'deleted_at': datetime.utcnow()
+                    },
+                    'updated_at': datetime.utcnow()
+                }
+            }
+        )
+
+        if result.matched_count == 0:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'User not found'
+            }), 404
+
+        return jsonify({
+            'message': 'Emergency contact deleted successfully',
+            'deleted_contact': {
+                'name': existing_contact.get('name', ''),
+                'relation': existing_contact.get('relation', ''),
+                'phone': existing_contact.get('phone', ''),
+            }
+        }), 200
+    except Exception as e:
+        print(f"Delete emergency contact error: {str(e)}")
+        return jsonify({
+            'error': 'Server Error',
+            'message': 'An error occurred while deleting emergency contact'
+        }), 500
+
+
+@emergency_bp.route('/emergency-contact/restore', methods=['POST'])
+@jwt_required()
+def restore_emergency_contact():
+    """Restore previously deleted emergency contact for current user."""
+    try:
+        current_user_id = get_jwt_identity()
+        user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+
+        if not user:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'User not found'
+            }), 404
+
+        deleted_contact = _normalize_contact(user.get('deleted_emergency_contact'))
+        if not deleted_contact:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'No deleted emergency contact available to restore'
+            }), 404
+
+        restored_contact = {
+            'name': deleted_contact.get('name', ''),
+            'relation': deleted_contact.get('relation', ''),
+            'phone': deleted_contact.get('phone', ''),
+            'updated_at': datetime.utcnow()
+        }
+
+        result = mongo.db.users.update_one(
+            {'_id': ObjectId(current_user_id)},
+            {
+                '$set': {
+                    'emergency_contact': restored_contact,
+                    'updated_at': datetime.utcnow()
+                },
+                '$unset': {'deleted_emergency_contact': ''}
+            }
+        )
+
+        if result.matched_count == 0:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'User not found'
+            }), 404
+
+        return jsonify({
+            'message': 'Emergency contact restored successfully',
+            'contact': {
+                'name': restored_contact['name'],
+                'relation': restored_contact['relation'],
+                'phone': restored_contact['phone'],
+                'updated_at': restored_contact['updated_at'].isoformat()
+            }
+        }), 200
+    except Exception as e:
+        print(f"Restore emergency contact error: {str(e)}")
+        return jsonify({
+            'error': 'Server Error',
+            'message': 'An error occurred while restoring emergency contact'
+        }), 500
+
+
 @emergency_bp.route('/emergency-alerts', methods=['GET'])
 @jwt_required()
 def list_emergency_alerts():

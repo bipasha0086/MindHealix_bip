@@ -48,14 +48,14 @@ const AIWellnessScore = ({ moodData, stressLevel, sleepHours, journalActivity })
 
     if (moodScore < 15) {
       generatedInsights.push({
-        icon: '😔',
-        text: 'Your mood indicates you might need extra support today',
+        icon: '�',
+        text: 'Your heart is open. Even on harder days, reaching out is a victory.',
         type: 'warning',
       });
     } else if (moodScore > 25) {
       generatedInsights.push({
         icon: '🌟',
-        text: 'Great mood! Keep up the positive mindset',
+        text: 'Your energy is radiant today! This is your moment—honor it and protect it.',
         type: 'positive',
       });
     }
@@ -67,8 +67,8 @@ const AIWellnessScore = ({ moodData, stressLevel, sleepHours, journalActivity })
 
     if (stressScore < 15) {
       generatedInsights.push({
-        icon: '⚡',
-        text: 'High stress detected. Try relaxation techniques',
+        icon: '💪',
+        text: 'High stress is here, but so are you. One small breath at a time.',
         type: 'alert',
       });
     }
@@ -78,17 +78,22 @@ const AIWellnessScore = ({ moodData, stressLevel, sleepHours, journalActivity })
     if (sleepHours >= 7 && sleepHours <= 9) {
       sleepScore = 25;
       generatedInsights.push({
-        icon: '😴',
-        text: 'Optimal sleep duration detected!',
+        icon: '✨',
+        text: 'Your sleep is a gift to yourself—you\'re honoring your rest beautifully.',
         type: 'positive',
       });
     } else if (sleepHours >= 6 && sleepHours < 7) {
       sleepScore = 18;
+      generatedInsights.push({
+        icon: '🌙',
+        text: 'You\'re doing well with sleep—a little more rest could make tomorrow brighter.',
+        type: 'suggestion',
+      });
     } else if (sleepHours < 6) {
       sleepScore = 8;
       generatedInsights.push({
-        icon: '⏰',
-        text: 'Insufficient sleep may affect your wellness',
+        icon: '🛌',
+        text: 'Your body is calling for rest. Sleep is self-care, not laziness—listen to yourself.',
         type: 'warning',
       });
     } else {
@@ -102,14 +107,14 @@ const AIWellnessScore = ({ moodData, stressLevel, sleepHours, journalActivity })
 
     if (journalActivity) {
       generatedInsights.push({
-        icon: '📝',
-        text: 'Great job journaling! Self-reflection boosts wellness',
+        icon: '�',
+        text: 'You\'re turning your story into wisdom. Every word you write matters.',
         type: 'positive',
       });
     } else {
       generatedInsights.push({
         icon: '✍️',
-        text: 'Consider journaling to track your emotional journey',
+        text: 'Your thoughts are worth capturing. A simple note today is healing tomorrow.',
         type: 'suggestion',
       });
     }
@@ -261,12 +266,16 @@ const AIWellnessScore = ({ moodData, stressLevel, sleepHours, journalActivity })
           <span className="text-xl">🔮</span>
           <h4 className="font-bold">Wellness Prediction</h4>
         </div>
-        <p className="text-sm opacity-90">
-          {score >= 70
-            ? 'Your wellness trajectory is positive! Maintain your current habits.'
+        <p className="text-sm opacity-95 leading-relaxed">
+          {score >= 80
+            ? `You're blooming right now. The positive energy you're building today will ripple into tomorrow. Keep trusting yourself.`
+            : score >= 70
+            ? `Your wellness arc is rising. You're making the right choices. Stay gentle with yourself and keep going.`
+            : score >= 60
+            ? `You're holding your own beautifully. Small consistent actions now become your strength later.`
             : score >= 50
-            ? 'You\'re on track. Small improvements can boost your score significantly.'
-            : 'Focus on self-care activities. Your wellness needs attention.'}
+            ? `Focus on one kind thing for yourself today. Growth happens in these quiet moments you give yourself.`
+            : `You're carrying a lot right now. That's okay. Today is about self-compassion, not perfection.`}
         </p>
       </div>
     </div>

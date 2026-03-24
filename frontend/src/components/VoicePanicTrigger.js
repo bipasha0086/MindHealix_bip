@@ -2,10 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const TRIGGERS = ['help', 'i am having a panic attack', "i'm having a panic attack"];
 
-const VoicePanicTrigger = ({ onDetected }) => {
+const VoicePanicTrigger = ({ onDetected, autoStart = false }) => {
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef(null);
+  const listeningRef = useRef(false);
+
+  useEffect(() => {
+    listeningRef.current = listening;
+  }, [listening]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -30,7 +35,7 @@ const VoicePanicTrigger = ({ onDetected }) => {
     };
 
     recognition.onend = () => {
-      if (listening) {
+      if (listeningRef.current) {
         try {
           recognition.start();
         } catch (_error) {
@@ -41,6 +46,15 @@ const VoicePanicTrigger = ({ onDetected }) => {
 
     recognitionRef.current = recognition;
 
+    if (autoStart) {
+      try {
+        recognition.start();
+        setListening(true);
+      } catch (_error) {
+        setListening(false);
+      }
+    }
+
     return () => {
       try {
         recognition.stop();
@@ -48,7 +62,7 @@ const VoicePanicTrigger = ({ onDetected }) => {
         // no-op
       }
     };
-  }, [listening, onDetected]);
+  }, [autoStart, onDetected]);
 
   const toggleListening = () => {
     const recognition = recognitionRef.current;

@@ -9,9 +9,12 @@ const LOCAL_MODE = String(process.env.REACT_APP_LOCAL_MODE || 'true').toLowerCas
 const ENTRIES_KEY = 'wellnesshub_mood_entries';
 const SESSION_USER_KEY = 'user';
 const CONTACT_KEY_PREFIX = 'wellnesshub_emergency_contact_';
+const DELETED_CONTACT_KEY_PREFIX = 'wellnesshub_deleted_emergency_contact_';
 const ALERTS_KEY_PREFIX = 'wellnesshub_emergency_alerts_';
 const YT_GUARD_PROFILE_KEY_PREFIX = 'wellnesshub_youtube_guard_profile_';
 const YT_GUARD_ACTIVITY_KEY = 'wellnesshub_youtube_guard_activity';
+const YT_GUARD_SUMMARY_CACHE_KEY = 'wellnesshub_youtube_guard_summary_cache';
+const YT_GUARD_WARNING_EVENTS_CACHE_KEY = 'wellnesshub_youtube_guard_warning_events_cache';
 
 const responseOf = (data) => Promise.resolve({ data });
 
@@ -39,6 +42,7 @@ const saveEntries = (entries) => {
 };
 
 const getEmergencyContactKey = (userId) => `${CONTACT_KEY_PREFIX}${userId || 'local-user'}`;
+const getDeletedEmergencyContactKey = (userId) => `${DELETED_CONTACT_KEY_PREFIX}${userId || 'local-user'}`;
 const getEmergencyAlertsKey = (userId) => `${ALERTS_KEY_PREFIX}${userId || 'local-user'}`;
 const getYoutubeGuardProfileKey = (userId) => `${YT_GUARD_PROFILE_KEY_PREFIX}${userId || 'local-user'}`;
 
@@ -53,6 +57,27 @@ const getEmergencyContactLocal = (userId) => {
 
 const saveEmergencyContactLocal = (userId, contact) => {
   localStorage.setItem(getEmergencyContactKey(userId), JSON.stringify(contact));
+};
+
+const deleteEmergencyContactLocal = (userId) => {
+  localStorage.removeItem(getEmergencyContactKey(userId));
+};
+
+const getDeletedEmergencyContactLocal = (userId) => {
+  try {
+    const raw = localStorage.getItem(getDeletedEmergencyContactKey(userId));
+    return raw ? JSON.parse(raw) : null;
+  } catch (_error) {
+    return null;
+  }
+};
+
+const saveDeletedEmergencyContactLocal = (userId, contact) => {
+  localStorage.setItem(getDeletedEmergencyContactKey(userId), JSON.stringify(contact));
+};
+
+const clearDeletedEmergencyContactLocal = (userId) => {
+  localStorage.removeItem(getDeletedEmergencyContactKey(userId));
 };
 
 const getEmergencyAlertsLocal = (userId) => {
@@ -107,6 +132,24 @@ const getYoutubeGuardActivityLocal = () => {
 
 const saveYoutubeGuardActivityLocal = (items) => {
   localStorage.setItem(YT_GUARD_ACTIVITY_KEY, JSON.stringify(items));
+};
+
+const getCachedJson = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed ?? fallback;
+  } catch (_error) {
+    return fallback;
+  }
+};
+
+const setCachedJson = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (_error) {
+    // Ignore storage quota and serialization errors.
+  }
 };
 
 const toDateOnly = (input) => {
@@ -537,6 +580,55 @@ export const emergencyAPI = {
     saveEmergencyContactLocal(userId, contact);
     return responseOf({ message: 'Emergency contact saved successfully', contact });
   },
+  deleteEmergencyContact: () => {
+    if (!LOCAL_MODE) return api.delete('/emergency-contact');
+
+    const user = getSessionUser();
+    const userId = user?.id || 'local-user';
+    const existing = getEmergencyContactLocal(userId);
+    if (!existing) {
+      return Promise.reject(new Error('No emergency contact found to delete'));
+    }
+
+    saveDeletedEmergencyContactLocal(userId, {
+      name: String(existing.name || '').trim(),
+      relation: String(existing.relation || '').trim(),
+      phone: String(existing.phone || '').trim(),
+      deleted_at: new Date().toISOString(),
+    });
+    deleteEmergencyContactLocal(userId);
+    return responseOf({
+      message: 'Emergency contact deleted successfully',
+      deleted_contact: {
+        name: String(existing.name || '').trim(),
+        relation: String(existing.relation || '').trim(),
+        phone: String(existing.phone || '').trim(),
+      },
+    });
+  },
+  restoreEmergencyContact: () => {
+    if (!LOCAL_MODE) return api.post('/emergency-contact/restore');
+
+    const user = getSessionUser();
+    const userId = user?.id || 'local-user';
+    const deleted = getDeletedEmergencyContactLocal(userId);
+
+    if (!deleted) {
+      return Promise.reject(new Error('No deleted emergency contact available to restore'));
+    }
+
+    const restored = {
+      name: String(deleted.name || '').trim(),
+      relation: String(deleted.relation || '').trim(),
+      phone: String(deleted.phone || '').trim(),
+      updated_at: new Date().toISOString(),
+    };
+
+    saveEmergencyContactLocal(userId, restored);
+    clearDeletedEmergencyContactLocal(userId);
+
+    return responseOf({ message: 'Emergency contact restored successfully', contact: restored });
+  },
   getEmergencyAlerts: (limit = 20) => {
     if (!LOCAL_MODE) return api.get(`/emergency-alerts?limit=${limit}`);
 
@@ -638,9 +730,17 @@ export const youtubeGuardAPI = {
     if (!LOCAL_MODE) return api.get(`/youtube/activity-summary?limit=${limit}`);
 
     try {
-      return await api.get(`/youtube/activity-summary?limit=${limit}`);
+      const res = await api.get(`/youtube/activity-summary?limit=${limit}`);
+      if (res?.data) {
+        setCachedJson(YT_GUARD_SUMMARY_CACHE_KEY, res.data);
+      }
+      return res;
     } catch (_error) {
-      // Fall back to local cached items.
+      const cached = getCachedJson(YT_GUARD_SUMMARY_CACHE_KEY, null);
+      if (cached && typeof cached === 'object') {
+        return responseOf(cached);
+      }
+      // Fall back to local derived items.
     }
 
     const items = getYoutubeGuardActivityLocal().slice(0, Number(limit));
@@ -676,7 +776,12 @@ export const youtubeGuardAPI = {
     if (!LOCAL_MODE) return api.get('/youtube/profile');
 
     try {
-      return await api.get('/youtube/profile');
+      const res = await api.get('/youtube/profile');
+      if (res?.data?.profile) {
+        const user = getSessionUser();
+        saveYoutubeGuardProfileLocal(user?.id || 'local-user', res.data.profile);
+      }
+      return res;
     } catch (_error) {
       // Profile endpoint requires auth in backend mode; local fallback keeps admin usable.
     }
@@ -707,8 +812,16 @@ export const youtubeGuardAPI = {
     if (!LOCAL_MODE) return api.get(`/youtube/warning-events?limit=${limit}`);
 
     try {
-      return await api.get(`/youtube/warning-events?limit=${limit}`);
+      const res = await api.get(`/youtube/warning-events?limit=${limit}`);
+      if (res?.data) {
+        setCachedJson(YT_GUARD_WARNING_EVENTS_CACHE_KEY, res.data);
+      }
+      return res;
     } catch (_error) {
+      const cached = getCachedJson(YT_GUARD_WARNING_EVENTS_CACHE_KEY, null);
+      if (cached && typeof cached === 'object') {
+        return responseOf(cached);
+      }
       return responseOf({ events: [], total: 0 });
     }
   },

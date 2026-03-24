@@ -43,27 +43,47 @@ const YouTubeGuardAdminPage = () => {
     else setLoading(true);
 
     try {
-      const [summaryRes, profileRes, eventsRes] = await Promise.all([
+      const [summaryRes, profileRes, eventsRes] = await Promise.allSettled([
         youtubeGuardAPI.getActivitySummary(40),
         youtubeGuardAPI.getProfile(),
         youtubeGuardAPI.getWarningEvents(100),
       ]);
 
-      const incomingSummary = summaryRes?.data || { items: [], summary: {} };
-      const incomingProfile = profileRes?.data?.profile || {
+      const incomingSummary = summaryRes.status === 'fulfilled'
+        ? summaryRes.value?.data || { items: [], summary: {} }
+        : { items: [], summary: {} };
+
+      const incomingProfile = profileRes.status === 'fulfilled'
+        ? profileRes.value?.data?.profile || {
+            strict_mode: false,
+            allow_list_channels: [],
+            blocked_topics: [],
+            custom_block_keywords: [],
+          }
+        : {
         strict_mode: false,
         allow_list_channels: [],
         blocked_topics: [],
         custom_block_keywords: [],
       };
-      const incomingEvents = eventsRes?.data?.events || [];
 
-      setSummaryData(incomingSummary);
-      setProfile(incomingProfile);
-      setWarningEvents(incomingEvents);
-      setAllowListInput((incomingProfile.allow_list_channels || []).join(', '));
-      setBlockedTopicsInput((incomingProfile.blocked_topics || []).join(', '));
-      setCustomKeywordsInput((incomingProfile.custom_block_keywords || []).join(', '));
+      const incomingEvents = eventsRes.status === 'fulfilled'
+        ? eventsRes.value?.data?.events || []
+        : [];
+
+      // Keep previous values if one endpoint failed, avoid UI blinking between empty and filled states.
+      if (summaryRes.status === 'fulfilled') {
+        setSummaryData(incomingSummary);
+      }
+      if (profileRes.status === 'fulfilled') {
+        setProfile(incomingProfile);
+        setAllowListInput((incomingProfile.allow_list_channels || []).join(', '));
+        setBlockedTopicsInput((incomingProfile.blocked_topics || []).join(', '));
+        setCustomKeywordsInput((incomingProfile.custom_block_keywords || []).join(', '));
+      }
+      if (eventsRes.status === 'fulfilled') {
+        setWarningEvents(incomingEvents);
+      }
     } catch (error) {
       console.error('Failed to load YouTube guard data:', error);
     } finally {

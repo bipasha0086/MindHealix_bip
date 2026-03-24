@@ -116,7 +116,38 @@ function pauseActiveVideo() {
   }
 }
 
-function enforceBlockedVideo(videoId, riskLevel, warningCount) {
+function toReadableSignalLabel(label) {
+  const raw = String(label || "").trim();
+  if (!raw) return "Unknown signal";
+
+  if (raw.startsWith("user_topic:")) {
+    return `Matched topic: ${raw.replace("user_topic:", "").trim()}`;
+  }
+
+  return raw.replace(/[_-]+/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+function summarizeBlockingReasons(result) {
+  const signals = Array.isArray(result?.detected_signals) ? result.detected_signals : [];
+  if (!signals.length) {
+    return ["Risk score exceeded your safety rules."];
+  }
+
+  const reasons = signals
+    .slice(0, 4)
+    .map((item) => {
+      const label = toReadableSignalLabel(item?.label);
+      const matches = Number(item?.matches || 0);
+      const tags = Array.isArray(item?.tags) ? item.tags.filter(Boolean).slice(0, 2) : [];
+      const tagsText = tags.length ? ` (${tags.join(", ")})` : "";
+      return matches > 0 ? `${label} x${matches}${tagsText}` : `${label}${tagsText}`;
+    })
+    .filter(Boolean);
+
+  return reasons.length ? reasons : ["Risk score exceeded your safety rules."];
+}
+
+function enforceBlockedVideo(videoId, riskLevel, warningCount, result) {
   const panel = document.getElementById("mindhealix-youtube-guard");
   if (panel) {
     panel.classList.add("mhx-hidden");
@@ -125,39 +156,41 @@ function enforceBlockedVideo(videoId, riskLevel, warningCount) {
   const activeVideoId = extractVideoId();
   if (videoId && activeVideoId === videoId) {
     pauseActiveVideo();
-    setTimeout(() => {
-      if (extractVideoId() === videoId) {
-        window.location.replace("https://www.youtube.com/");
-      }
-    }, 1200);
   }
+
+  const reasonsHtml = summarizeBlockingReasons(result)
+    .map((line) => `<li>${line}</li>`)
+    .join("");
 
   let blocker = document.getElementById("mindhealix-youtube-blocker");
   if (!blocker) {
     blocker = document.createElement("div");
     blocker.id = "mindhealix-youtube-blocker";
-    blocker.innerHTML = `
-      <div class="mhx-blocker-card">
-        <h2>Video Blocked By MindHealix Guard</h2>
-        <p class="mhx-blocker-line">This video crossed your safety threshold after ${STATE.warningLimit} warnings.</p>
-        <p class="mhx-blocker-line">Risk level: <strong>${String(riskLevel || "high").toUpperCase()}</strong></p>
-        <p class="mhx-blocker-line">Warnings for this video: <strong>${warningCount}</strong></p>
-        <div class="mhx-blocker-actions">
-          <button id="mhx-go-home">Go To YouTube Home</button>
-          <button id="mhx-go-back" class="mhx-secondary">Go Back</button>
-        </div>
-      </div>
-    `;
     document.body.appendChild(blocker);
-
-    blocker.querySelector("#mhx-go-home").addEventListener("click", () => {
-      window.location.href = "https://www.youtube.com/";
-    });
-
-    blocker.querySelector("#mhx-go-back").addEventListener("click", () => {
-      window.history.back();
-    });
   }
+
+  blocker.innerHTML = `
+    <div class="mhx-blocker-card">
+      <h2>Video Blocked By MindHealix Guard</h2>
+      <p class="mhx-blocker-line">This video crossed your safety threshold after ${STATE.warningLimit} warnings.</p>
+      <p class="mhx-blocker-line">Risk level: <strong>${String(riskLevel || "high").toUpperCase()}</strong></p>
+      <p class="mhx-blocker-line">Warnings for this video: <strong>${warningCount}</strong></p>
+      <p class="mhx-blocker-line"><strong>Why it was blocked:</strong></p>
+      <ul class="mhx-blocker-reasons">${reasonsHtml}</ul>
+      <div class="mhx-blocker-actions">
+        <button id="mhx-go-home">Go To YouTube Home</button>
+        <button id="mhx-go-back" class="mhx-secondary">Go Back</button>
+      </div>
+    </div>
+  `;
+
+  blocker.querySelector("#mhx-go-home").addEventListener("click", () => {
+    window.location.href = "https://www.youtube.com/";
+  });
+
+  blocker.querySelector("#mhx-go-back").addEventListener("click", () => {
+    window.history.back();
+  });
 
   pauseActiveVideo();
   stopBlockerEnforcementLoop();
@@ -172,7 +205,12 @@ function enforceBlockedVideo(videoId, riskLevel, warningCount) {
 
 function extractVideoId() {
   const url = new URL(window.location.href);
-  return url.searchParams.get("v") || "";
+  const watchId = url.searchParams.get("v");
+  if (watchId) return watchId;
+
+  // Support YouTube Shorts URLs like /shorts/<id>
+  const match = url.pathname.match(/^\/shorts\/([^/?#]+)/);
+  return match ? String(match[1]) : "";
 }
 
 function readText(selector) {
@@ -180,10 +218,38 @@ function readText(selector) {
   return (el && el.textContent ? el.textContent : "").trim();
 }
 
+function readMetaContent(selector) {
+  const el = document.querySelector(selector);
+  const content = el ? el.getAttribute("content") : "";
+  return String(content || "").trim();
+}
+
+function normalizeYoutubeTitle(rawTitle) {
+  const title = String(rawTitle || "").trim();
+  if (!title) return "";
+  return title.replace(/\s*-\s*YouTube\s*$/i, "").trim();
+}
+
 function collectVideoData() {
-  const title = readText("h1.ytd-watch-metadata yt-formatted-string") || readText("h1.title");
-  const channel = readText("ytd-channel-name a") || readText("#channel-name a");
-  const description = readText("#description-inline-expander") || readText("#description");
+  const title =
+    readText("h1.ytd-watch-metadata yt-formatted-string") ||
+    readText("h1.title") ||
+    readMetaContent('meta[property="og:title"]') ||
+    readMetaContent('meta[name="title"]') ||
+    normalizeYoutubeTitle(document.title);
+
+  const channel =
+    readText("ytd-channel-name a") ||
+    readText("#channel-name a") ||
+    readMetaContent('meta[itemprop="author"]') ||
+    readMetaContent('meta[name="author"]');
+
+  const description =
+    readText("#description-inline-expander") ||
+    readText("#description") ||
+    readMetaContent('meta[property="og:description"]') ||
+    readMetaContent('meta[name="description"]');
+
   const pageUrl = window.location.href;
 
   return {
@@ -379,7 +445,8 @@ async function runAnalysis(force = false) {
     return;
   }
 
-  if (!location.pathname.startsWith("/watch")) {
+  const isWatchPage = location.pathname.startsWith("/watch") || location.pathname.startsWith("/shorts/");
+  if (!isWatchPage) {
     const panel = document.getElementById("mindhealix-youtube-guard");
     if (panel) panel.classList.add("mhx-hidden");
     clearBlockerOverlay();
@@ -449,7 +516,7 @@ async function runAnalysis(force = false) {
     }
 
     if (policy.blocked) {
-      enforceBlockedVideo(payload.video_id, result.risk_level, policy.count);
+      enforceBlockedVideo(payload.video_id, result.risk_level, policy.count, result);
       return;
     }
 

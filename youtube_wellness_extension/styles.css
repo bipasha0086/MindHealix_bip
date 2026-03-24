@@ -113,6 +113,17 @@
   line-height: 1.35;
 }
 
+#mindhealix-youtube-blocker .mhx-blocker-reasons {
+  margin: 6px 0 0 18px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+#mindhealix-youtube-blocker .mhx-blocker-reasons li {
+  margin: 4px 0;
+}
+
 #mindhealix-youtube-blocker .mhx-blocker-actions {
   margin-top: 14px;
   display: flex;

@@ -1,16 +1,51 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import BreathingExercise from './BreathingExercise';
 import PanicSupportChat from './PanicSupportChat';
 import VoicePanicTrigger from './VoicePanicTrigger';
+import { emergencyAPI } from '../services/api';
 
 const GlobalPanicOverlay = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [callStatus, setCallStatus] = useState('');
+  const [trustedContact, setTrustedContact] = useState(null);
 
-  const simulateTrustedCall = () => {
-    setCallStatus('Calling trusted contact... Please keep breathing slowly.');
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadContact = async () => {
+      try {
+        const response = await emergencyAPI.getEmergencyContact();
+        if (!isMounted) return;
+        setTrustedContact(response?.data?.contact || null);
+      } catch (_error) {
+        if (isMounted) setTrustedContact(null);
+      }
+    };
+
+    loadContact();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const dialablePhone = String(trustedContact?.phone || '').replace(/[^\d+]/g, '');
+  const contactLabel = trustedContact?.name || 'trusted contact';
+
+  const callTrustedContact = ({ fromVoice = false } = {}) => {
+    if (!dialablePhone) {
+      setCallStatus('No emergency contact phone found. Please save one in Profile > Emergency Contact.');
+      return;
+    }
+
+    setCallStatus(
+      `${fromVoice ? 'Voice trigger detected. ' : ''}Calling ${contactLabel} at ${dialablePhone}... Please keep breathing slowly.`
+    );
+
+    window.location.href = `tel:${dialablePhone}`;
+
     setTimeout(() => {
-      setCallStatus('Trusted contact connected (simulated). You are supported.');
+      setCallStatus(`${contactLabel} call intent sent. Keep breathing. You are supported.`);
     }, 1500);
   };
 
@@ -68,25 +103,28 @@ const GlobalPanicOverlay = () => {
                   <p className="text-sm text-slate-600 mt-2">Call a trusted contact to stay with you while this passes.</p>
                   <button
                     type="button"
-                    onClick={simulateTrustedCall}
+                    onClick={() => callTrustedContact()}
                     className="w-full mt-4 rounded-lg bg-emerald-600 text-white py-2.5 text-sm font-semibold hover:bg-emerald-700"
                   >
-                    Call Trusted Contact
+                    Call {contactLabel}
                   </button>
                   {callStatus && <p className="text-sm text-emerald-700 mt-3">{callStatus}</p>}
                 </div>
-
-                <VoicePanicTrigger
-                  onDetected={() => {
-                    setIsOpen(true);
-                    setCallStatus('Voice trigger detected. Panic support is active.');
-                  }}
-                />
               </div>
             </div>
           </div>
         </div>
       )}
+
+      <div className="fixed bottom-5 left-5 z-40 w-[min(22rem,calc(100vw-2.5rem))]">
+        <VoicePanicTrigger
+          autoStart
+          onDetected={() => {
+            setIsOpen(true);
+            callTrustedContact({ fromVoice: true });
+          }}
+        />
+      </div>
     </>
   );
 };

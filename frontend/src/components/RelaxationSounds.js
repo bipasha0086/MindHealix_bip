@@ -1,22 +1,59 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Pause, Square, Volume2, RotateCw } from 'lucide-react';
+import { Play, Pause, Volume2, RotateCw } from 'lucide-react';
 
 const RelaxationSounds = ({ stressLevel }) => {
-  const audioRef = useRef(null);
+  const youtubeRef = useRef(null);
+  const playerRef = useRef(null);
   const [selectedSound, setSelectedSound] = useState(null);
+  const [ytApiReady, setYtApiReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
-  const [volume, setVolume] = useState(0.7);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [audioError, setAudioError] = useState('');
+  const [volume, setVolume] = useState(70);
 
-  // Sound Categories - Flattened for 2x2 grid
+  // Nature-focused soothing sound library powered by YouTube
   const ALL_SOUNDS = [
-    { id: 'piano', label: 'Soft Piano', icon: '🎹', src: '/sounds/piano.wav', category: 'focus' },
-    { id: 'windchimes', label: 'Wind Chimes', icon: '🎐', src: '/sounds/windchimes.wav', category: 'relaxation' },
-    { id: 'crickets', label: 'Night Crickets', icon: '🌙', src: '/sounds/crickets.wav', category: 'sleep' },
-    { id: 'bowl', label: 'Meditation Bowl', icon: '🧘', src: '/sounds/bowl.wav', category: 'sleep' },
+    {
+      id: 'birdschirping',
+      label: 'Birds Chirping',
+      icon: '🐦',
+      youtubeId: 'OdIJ2x3nxzQ',
+      category: 'relaxation'
+    },
+    {
+      id: 'foreststream',
+      label: 'Forest Stream',
+      icon: '🌿',
+      youtubeId: '5yx6BWlEVcY',
+      category: 'focus'
+    },
+    {
+      id: 'oceanwaves',
+      label: 'Ocean Waves',
+      icon: '🌊',
+      youtubeId: 'V1bFr2SWP1I',
+      category: 'sleep'
+    },
+    {
+      id: 'rainthunder',
+      label: 'Rain & Thunder',
+      icon: '🌧️',
+      youtubeId: 'mPZkdNFkNps',
+      category: 'sleep'
+    },
+    {
+      id: 'windchimes',
+      label: 'Wind Chimes',
+      icon: '🎐',
+      youtubeId: '0WqL9W-2aNA',
+      category: 'relaxation'
+    },
+    {
+      id: 'meditationbowl',
+      label: 'Meditation Bowl',
+      icon: '🧘',
+      youtubeId: 'K-qn0JFfKxA',
+      category: 'sleep'
+    },
   ];
 
   const stressLevelValue = String(stressLevel || '').toLowerCase();
@@ -25,13 +62,13 @@ const RelaxationSounds = ({ stressLevel }) => {
   const aiSuggestion = useMemo(() => {
     if (stressLevelValue === 'high') {
       return {
-        text: 'High stress detected. Try Forest Birds or Wind Chimes for instant calm.',
+        text: 'High stress detected. Start with Birds Chirping or Wind Chimes for instant calm.',
         category: 'relaxation'
       };
     }
     if (stressLevelValue === 'medium') {
       return {
-        text: 'Moderate stress. Focus Sounds like Rain can help you concentrate.',
+        text: 'Moderate stress. Forest Stream can help you focus and settle your mind.',
         category: 'focus'
       };
     }
@@ -41,110 +78,113 @@ const RelaxationSounds = ({ stressLevel }) => {
     };
   }, [stressLevelValue]);
 
-  // Setup audio listeners
+  // Initialize YouTube API
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (window.YT && window.YT.Player) {
+      setYtApiReady(true);
+      return;
+    }
 
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration || 0);
-      setAudioError('');
-    };
+    const existingReadyHandler = window.onYouTubeIframeAPIReady;
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime || 0);
-    };
-
-    const handleEnded = () => {
-      if (isLooping) {
-        audio.currentTime = 0;
-        audio.play();
-      } else {
-        setIsPlaying(false);
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof existingReadyHandler === 'function') {
+        existingReadyHandler();
       }
+      setYtApiReady(true);
     };
+  }, []);
 
-    const handleError = () => {
-      setAudioError('Could not load audio. Please check sound files in /public/sounds/');
-      setIsPlaying(false);
-    };
+  // Initialize player when sound is selected
+  useEffect(() => {
+    if (!selectedSound || !youtubeRef.current || !ytApiReady || !window.YT?.Player) return;
 
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
+    if (playerRef.current) {
+      playerRef.current.destroy();
+    }
+
+    playerRef.current = new window.YT.Player(youtubeRef.current, {
+      height: '0',
+      width: '0',
+      videoId: selectedSound.youtubeId,
+      events: {
+        'onReady': onPlayerReady,
+        'onStateChange': onPlayerStateChange,
+      },
+      playerVars: {
+        controls: 0,
+        modestbranding: 1,
+        rel: 0,
+      }
+    });
 
     return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
+      if (playerRef.current) {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
     };
-  }, [isLooping]);
+  }, [selectedSound, ytApiReady]);
 
-  // Update volume
+  // Set volume
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
+    if (playerRef.current && playerRef.current.setVolume) {
+      playerRef.current.setVolume(volume);
     }
   }, [volume]);
 
-  const formatTime = (seconds) => {
-    if (!Number.isFinite(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${String(secs).padStart(2, '0')}`;
+  const onPlayerReady = (event) => {
+    event.target.setVolume(volume);
+    event.target.playVideo();
   };
 
-  const playSound = (sound) => {
-    if (audioRef.current) {
-      audioRef.current.src = sound.src;
-      audioRef.current.play().catch(err => {
-        setAudioError('Unable to play audio. File may not exist.');
-        console.error('Audio play error:', err);
-      });
-      setSelectedSound(sound);
+  const onPlayerStateChange = (event) => {
+    const YT = window.YT;
+    if (event.data === YT.PlayerState.PLAYING) {
       setIsPlaying(true);
+    } else if (event.data === YT.PlayerState.PAUSED) {
+      setIsPlaying(false);
+    } else if (event.data === YT.PlayerState.ENDED) {
+      if (isLooping) {
+        event.target.playVideo();
+      } else {
+        setIsPlaying(false);
+      }
     }
   };
 
+  const playSound = (sound) => {
+    if (selectedSound?.id === sound.id && playerRef.current) {
+      playerRef.current.playVideo();
+      return;
+    }
+    setSelectedSound(sound);
+  };
+
   const handlePlay = () => {
-    if (selectedSound) {
-      audioRef.current?.play();
-      setIsPlaying(true);
+    if (playerRef.current) {
+      playerRef.current.playVideo();
     }
   };
 
   const handlePause = () => {
-    audioRef.current?.pause();
-    setIsPlaying(false);
-  };
-
-  const handleStop = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    setIsPlaying(false);
-    setCurrentTime(0);
-  };
-
-  const handleProgressChange = (e) => {
-    const newTime = parseFloat(e.target.value);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
+    if (playerRef.current) {
+      playerRef.current.pauseVideo();
     }
   };
 
   return (
     <div className="rounded-3xl p-4 shadow-lg bg-gradient-to-br from-emerald-50 via-sky-50 to-purple-50 border border-emerald-200">
-      <audio ref={audioRef} crossOrigin="anonymous" />
+      <div ref={youtubeRef} style={{ display: 'none' }} />
 
       {/* Header */}
       <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-800">🎵 Relax & Focus</h2>
-        <p className="text-gray-600 text-xs">Choose your sound</p>
+        <p className="text-gray-600 text-xs">Nature soothing sounds: birds, rain, waves and more</p>
       </div>
 
       {/* AI Suggestion */}
@@ -185,31 +225,8 @@ const RelaxationSounds = ({ stressLevel }) => {
             {selectedSound.icon} {selectedSound.label}
           </p>
 
-          {/* Audio Error */}
-          {audioError && (
-            <div className="my-2 p-2 bg-red-50 border border-red-200 rounded">
-              <p className="text-[10px] text-red-700">{audioError}</p>
-            </div>
-          )}
-
-          {/* Progress Bar */}
-          <div className="my-2">
-            <input
-              type="range"
-              min="0"
-              max={duration || 0}
-              value={currentTime}
-              onChange={handleProgressChange}
-              className="w-full h-1.5 bg-gray-200 rounded appearance-none cursor-pointer accent-emerald-500"
-            />
-            <div className="flex justify-between text-[10px] text-gray-600 mt-1">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-          </div>
-
           {/* Controls */}
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 my-3">
             <button
               onClick={handlePlay}
               disabled={isPlaying}
@@ -226,14 +243,6 @@ const RelaxationSounds = ({ stressLevel }) => {
               title="Pause"
             >
               <Pause className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={handleStop}
-              className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition"
-              title="Stop"
-            >
-              <Square className="w-4 h-4" />
             </button>
 
             <button
@@ -255,14 +264,13 @@ const RelaxationSounds = ({ stressLevel }) => {
             <input
               type="range"
               min="0"
-              max="1"
-              step="0.1"
+              max="100"
               value={volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              onChange={(e) => setVolume(parseInt(e.target.value))}
               className="flex-1 h-1.5 bg-gray-200 rounded appearance-none cursor-pointer accent-blue-500"
               title="Volume"
             />
-            <span className="text-[10px] text-gray-600 w-7">{Math.round(volume * 100)}%</span>
+            <span className="text-[10px] text-gray-600 w-7">{volume}%</span>
           </div>
 
           {/* Status */}
@@ -276,7 +284,7 @@ const RelaxationSounds = ({ stressLevel }) => {
 
       {!selectedSound && (
         <div className="p-3 text-center bg-white rounded-lg border border-gray-200">
-          <p className="text-xs text-gray-500">Select a sound above</p>
+          <p className="text-xs text-gray-500">Select a sound above to start</p>
         </div>
       )}
     </div>

@@ -21,10 +21,23 @@ def _append_mongo_timeout_params(uri, connect_timeout_ms, select_timeout_ms):
 
 
 def _parse_cors_origins(raw_origins):
+    # Include extension and YouTube origins so the browser guard can call backend APIs.
+    required_origins = [
+        'http://localhost:3000',
+        'https://www.youtube.com',
+        'https://youtube.com',
+        r'chrome-extension://.*',
+    ]
+
     if not raw_origins:
-        return ['http://localhost:3000']
+        return required_origins
+
     origins = [origin.strip() for origin in str(raw_origins).split(',') if origin.strip()]
-    return origins or ['http://localhost:3000']
+    merged = origins[:]
+    for origin in required_origins:
+        if origin not in merged:
+            merged.append(origin)
+    return merged
 
 class Config:
     """Base configuration class"""

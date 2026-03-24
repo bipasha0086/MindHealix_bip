@@ -1,9 +1,53 @@
 """
-Database Models
-User and Mood data structures
+Models Package - Database Models + 4 Major AI Modules
+
+Database Models:
+- UserModel: User authentication and profile data
+- MoodModel: Mood tracking entries
+
+AI & ML Modules (4 Major Models):
+1. Face Stress Module - Facial emotion detection using computer vision
+2. Sentiment Module - Text sentiment analysis and emotional keyword extraction
+3. Stress Prediction Module - ML-based stress level prediction
+4. Recommendations Module - Personalized mental health recommendations engine
 """
 from datetime import datetime
 from bson.objectid import ObjectId
+
+# Import 4 major AI modules
+from . import face_stress_module
+from . import sentiment_module
+from . import stress_prediction_module
+from . import recommendations_module
+
+# Direct imports for AI functions
+from .face_stress_module import (
+    predict_face_stress_from_image,
+    get_face_model_status,
+)
+
+from .sentiment_module import (
+    analyze_sentiment,
+    get_sentiment_label,
+    analyze_emotional_keywords,
+    clean_text,
+)
+
+from .stress_prediction_module import (
+    predict_stress,
+    predict_stress_with_source,
+    calculate_stress_score,
+    get_stress_insights,
+    get_model_status,
+    StressPredictor,
+)
+
+from .recommendations_module import (
+    get_recommendations,
+    get_crisis_resources,
+    get_coping_strategies,
+    get_activity_suggestions,
+)
 
 class UserModel:
     """

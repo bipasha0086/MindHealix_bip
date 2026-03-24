@@ -18,6 +18,11 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [deletingContact, setDeletingContact] = useState(false);
+  const [restoringContact, setRestoringContact] = useState(false);
+  const [recentlyDeletedContact, setRecentlyDeletedContact] = useState(null);
+  const [contactActionMessage, setContactActionMessage] = useState('');
+  const [contactActionError, setContactActionError] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState('');
@@ -110,14 +115,62 @@ const ProfilePage = () => {
   const saveEmergencyContact = async () => {
     setSaving(true);
     setSaved(false);
+    setContactActionError('');
     try {
       await emergencyAPI.saveEmergencyContact(contact);
       setSaved(true);
+      setRecentlyDeletedContact(null);
+      setContactActionMessage('Emergency contact saved.');
       setTimeout(() => setSaved(false), 1800);
     } catch (error) {
       console.error('Failed to save emergency contact:', error);
+      setContactActionError('Could not save emergency contact. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deleteEmergencyContact = async () => {
+    const hasAnyContact = Boolean(contact.name || contact.relation || contact.phone);
+    if (!hasAnyContact) return;
+
+    const confirmed = window.confirm('Delete saved emergency contact?');
+    if (!confirmed) return;
+
+    setDeletingContact(true);
+    setContactActionError('');
+    try {
+      const response = await emergencyAPI.deleteEmergencyContact();
+      setRecentlyDeletedContact(response?.data?.deleted_contact || null);
+      setContact({ name: '', relation: '', phone: '' });
+      setSaved(false);
+      setContactActionMessage('Emergency contact deleted. You can restore it anytime.');
+    } catch (error) {
+      console.error('Failed to delete emergency contact:', error);
+      setContactActionError('Could not delete emergency contact.');
+    } finally {
+      setDeletingContact(false);
+    }
+  };
+
+  const restoreEmergencyContact = async () => {
+    setRestoringContact(true);
+    setContactActionError('');
+    try {
+      const response = await emergencyAPI.restoreEmergencyContact();
+      const restored = response?.data?.contact || {};
+      setContact({
+        name: restored.name || '',
+        relation: restored.relation || '',
+        phone: restored.phone || '',
+      });
+      setRecentlyDeletedContact(null);
+      setContactActionMessage('Emergency contact restored successfully.');
+    } catch (error) {
+      console.error('Failed to restore emergency contact:', error);
+      setContactActionError('No deleted contact available to restore.');
+    } finally {
+      setRestoringContact(false);
     }
   };
 
@@ -270,7 +323,25 @@ const ProfilePage = () => {
               >
                 {saving ? 'Saving...' : 'Save Emergency Contact'}
               </button>
+              <button
+                type="button"
+                onClick={deleteEmergencyContact}
+                disabled={deletingContact || (!contact.name && !contact.relation && !contact.phone)}
+                className="w-full rounded-lg border border-rose-300 bg-white text-rose-700 py-2.5 text-sm font-bold hover:bg-rose-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {deletingContact ? 'Deleting...' : 'Delete Saved Contact'}
+              </button>
+              <button
+                type="button"
+                onClick={restoreEmergencyContact}
+                disabled={restoringContact || !recentlyDeletedContact}
+                className="w-full rounded-lg border border-emerald-300 bg-white text-emerald-700 py-2.5 text-sm font-bold hover:bg-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {restoringContact ? 'Restoring...' : 'Restore Last Deleted Contact'}
+              </button>
               {saved && <p className="text-xs text-emerald-700 font-semibold">Saved successfully</p>}
+              {contactActionMessage && <p className="text-xs text-emerald-700 font-semibold">{contactActionMessage}</p>}
+              {contactActionError && <p className="text-xs text-rose-700 font-semibold">{contactActionError}</p>}
 
               <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-sm">
                 <div className="text-xs text-slate-500 mb-1">Saved Contact Preview</div>
