@@ -16,6 +16,7 @@ import AssessmentPage from './pages/AssessmentPage';
 import MLModelPage from './pages/MLModelPage';
 import ProfilePage from './pages/ProfilePage';
 import YouTubeGuardAdminPage from './pages/YouTubeGuardAdminPage';
+import StressSupportChatPage from './pages/StressSupportChatPage';
 
 // Components
 import Navbar from './components/Navbar';
@@ -127,6 +128,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <YouTubeGuardAdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/stress-support-chat"
+              element={
+                <ProtectedRoute>
+                  <StressSupportChatPage />
                 </ProtectedRoute>
               }
             />

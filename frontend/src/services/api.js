@@ -827,4 +827,62 @@ export const youtubeGuardAPI = {
   },
 };
 
+// Stress Support Chat API
+export const stressChatAPI = {
+  startSession: async (payload) => {
+    const response = await api.post('/stress-chat/start-session', payload);
+    return response.data;
+  },
+
+  getRooms: async (params) => {
+    const response = await api.get('/stress-chat/rooms', { params });
+    return response.data;
+  },
+
+  createRoom: async (payload) => {
+    const response = await api.post('/stress-chat/rooms', payload);
+    return response.data;
+  },
+
+  joinRoom: async (roomId, payload) => {
+    const response = await api.post(`/stress-chat/rooms/${roomId}/join`, payload);
+    return response.data;
+  },
+
+  leaveRoom: async (roomId, payload) => {
+    const response = await api.post(`/stress-chat/rooms/${roomId}/leave`, payload);
+    return response.data;
+  },
+
+  getRoomMessages: async (roomId, params) => {
+    const response = await api.get(`/stress-chat/rooms/${roomId}/messages`, { params });
+    return response.data;
+  },
+
+  sendMessage: async (roomId, payload) => {
+    const response = await api.post(`/stress-chat/rooms/${roomId}/send-message`, payload);
+    return response.data.message;
+  },
+
+  reportMessage: async (payload) => {
+    const response = await api.post('/stress-chat/report-message', payload);
+    return response.data;
+  },
+
+  blockUser: async (payload) => {
+    const response = await api.post('/stress-chat/block-user', payload);
+    return response.data;
+  },
+
+  endSession: async (payload) => {
+    const response = await api.post('/stress-chat/end-session', payload);
+    return response.data;
+  },
+
+  getStatistics: async () => {
+    const response = await api.get('/stress-chat/statistics');
+    return response.data;
+  },
+};
+
 export default api;
