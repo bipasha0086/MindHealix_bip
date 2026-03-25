@@ -121,6 +121,8 @@ const ProfilePage = () => {
       setSaved(true);
       setRecentlyDeletedContact(null);
       setContactActionMessage('Emergency contact saved.');
+      // Clear form after successful save
+      setContact({ name: '', relation: '', phone: '' });
       setTimeout(() => setSaved(false), 1800);
     } catch (error) {
       console.error('Failed to save emergency contact:', error);

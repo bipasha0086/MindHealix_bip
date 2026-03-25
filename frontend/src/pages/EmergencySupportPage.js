@@ -49,7 +49,8 @@ const EmergencySupportPage = () => {
       setStatusMessage('');
       await emergencyAPI.saveEmergencyContact(contact);
       setStatusMessage('Emergency contact saved. They will be notified on high stress events.');
-      await fetchEmergencyData();
+      // Clear form after successful save
+      setContact({ name: '', relation: '', phone: '' });
     } catch (error) {
       console.error('Failed to save emergency contact:', error);
       setStatusMessage('Could not save contact. Please try again.');
