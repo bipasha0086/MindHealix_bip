@@ -18,6 +18,44 @@ from ai_model.safety_moderation import moderate_message
 
 stress_chat_bp = Blueprint("stress_chat", __name__)
 
+BOT_SENDER_ID = "peer_support_bot"
+
+
+def _generate_bot_reply(message_text):
+    """Generate a short supportive auto-reply for room chats."""
+    text = str(message_text or "").lower()
+
+    if any(word in text for word in ["panic", "anxious", "anxiety"]):
+        return (
+            "I hear you. Let's slow it down together: inhale for 4 seconds, hold for 4, "
+            "exhale for 6. Repeat 4 times. Want a 2-minute grounding step next?"
+        )
+    if any(word in text for word in ["alone", "lonely"]):
+        return (
+            "You are not alone right now. I am here with you. A small step: send one safe "
+            "message to someone you trust, and I can help you draft it."
+        )
+    if any(word in text for word in ["stress", "overwhelmed", "pressure"]):
+        return (
+            "That sounds heavy. Let's make it manageable: pick one tiny task you can finish in "
+            "10 minutes, then take a short break."
+        )
+    if any(word in text for word in ["sleep", "insomnia", "tired"]):
+        return (
+            "Sleep stress can amplify everything. Tonight try a wind-down: no screens for 30 "
+            "minutes, warm water, and slow breathing before bed."
+        )
+    if any(word in text for word in ["hurt myself", "self harm", "kill myself", "suicide"]):
+        return (
+            "Your safety matters most. If you feel at risk, call your local emergency number now. "
+            "If you can, reach out to a trusted person and stay with them."
+        )
+
+    return (
+        "Thank you for sharing. I am listening. If you want, tell me what feels hardest right now "
+        "and we will break it into one small next step."
+    )
+
 
 # Anonymous username generation
 ADJECTIVES = [
@@ -304,8 +342,8 @@ def send_message(room_id):
                 "flags": moderation["flags"]
             }), 403
         
-        # Store message
-        message_doc = {
+        # Store user message
+        user_message_doc = {
             "_id": ObjectId(),
             "room_id": ObjectId(room_id),
             "sender_id": session_id,
@@ -314,8 +352,8 @@ def send_message(room_id):
             "flagged": moderation["action"] == "flag",
             "timestamp": datetime.utcnow(),
         }
-        
-        result = mongo.db.stress_chat_messages.insert_one(message_doc)
+
+        result = mongo.db.stress_chat_messages.insert_one(user_message_doc)
         
         # Update room message count
         mongo.db.stress_chat_rooms.update_one(
@@ -325,11 +363,34 @@ def send_message(room_id):
                 "$set": {"last_message_at": datetime.utcnow()}
             }
         )
-        
-        message_doc["_id"] = str(result.inserted_id)
-        message_doc["room_id"] = str(message_doc["room_id"])
-        
-        return jsonify({"message": message_doc}), 201
+
+        user_message_doc["_id"] = str(result.inserted_id)
+        user_message_doc["room_id"] = str(user_message_doc["room_id"])
+
+        # Temporary single-user support: send a bot reply in the same room.
+        bot_text = _generate_bot_reply(message_text)
+        bot_message_doc = {
+            "_id": ObjectId(),
+            "room_id": ObjectId(room_id),
+            "sender_id": BOT_SENDER_ID,
+            "message": bot_text,
+            "moderation_score": 1.0,
+            "flagged": False,
+            "timestamp": datetime.utcnow(),
+        }
+        bot_result = mongo.db.stress_chat_messages.insert_one(bot_message_doc)
+        mongo.db.stress_chat_rooms.update_one(
+            {"_id": ObjectId(room_id)},
+            {
+                "$inc": {"message_count": 1},
+                "$set": {"last_message_at": datetime.utcnow()}
+            }
+        )
+
+        bot_message_doc["_id"] = str(bot_result.inserted_id)
+        bot_message_doc["room_id"] = str(bot_message_doc["room_id"])
+
+        return jsonify({"message": user_message_doc, "bot_message": bot_message_doc}), 201
     except Exception as e:
         print(f"Error sending message: {e}")
         return jsonify({"error": "Failed to send message"}), 500

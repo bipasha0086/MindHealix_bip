@@ -133,7 +133,13 @@ const StressSupportChatHub = () => {
         }));
       }
 
-      setMessages((prev) => [...prev, response.message]);
+      setMessages((prev) => {
+        const next = [...prev, response.message];
+        if (response.bot_message) {
+          next.push(response.bot_message);
+        }
+        return next;
+      });
       setMessageInput('');
     } catch (error) {
       if (error.response?.status === 403) {
@@ -467,7 +473,13 @@ const StressSupportChatHub = () => {
                 {messages.map((msg) => (
                   <div key={msg._id} className="rounded-lg bg-white p-3 border border-slate-200">
                     <div className="flex items-start justify-between mb-1">
-                      <span className="text-xs font-bold text-cyan-700">{msg.sender_id === sessionId ? 'You' : 'Other User'}</span>
+                      <span className="text-xs font-bold text-cyan-700">
+                        {msg.sender_id === sessionId
+                          ? 'You'
+                          : msg.sender_id === 'peer_support_bot'
+                            ? 'Support Bot'
+                            : 'Other User'}
+                      </span>
                       {msg.flagged && (
                         <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded">⚠️ Flagged</span>
                       )}

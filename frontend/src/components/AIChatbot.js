@@ -317,8 +317,21 @@ const AIChatbot = () => {
   };
 
   const handleSend = () => {
-    const userText = input.trim();
+    let userText = input.trim();
     if (!userText || isTyping) return;
+
+    // Special handling for 'Share Your Thoughts' quick action
+    if (userText === '__share_thoughts') {
+      setInput('');
+      setIsTyping(true);
+      setTimeout(() => {
+        addBotMessage(
+          'You can share anything on your mind here. I am here to listen, support, and motivate you—especially if you find it hard to open up. Just type your thoughts and I will respond with encouragement.'
+        );
+        setIsTyping(false);
+      }, 400);
+      return;
+    }
 
     addUserMessage(userText);
     setInput('');
@@ -349,6 +362,16 @@ const AIChatbot = () => {
         return;
       }
 
+      // If the last bot message was the share-thoughts prompt, reply with motivational/empathetic message
+      const lastBotMsg = messages.filter((m) => m.sender === 'bot').slice(-1)[0]?.text || '';
+      if (lastBotMsg.includes('You can share anything on your mind here')) {
+        addBotMessage(
+          'Thank you for opening up. It takes courage to share your feelings, especially if you are introverted or feeling alone. Remember, your thoughts matter and you are not alone. Every step you take to express yourself is a step toward healing. Keep going—you are stronger than you think!'
+        );
+        setIsTyping(false);
+        return;
+      }
+
       const safetyFirst = generateGeneralResponse(userText);
       const isCrisisKeyword = /\b(suicide|kill myself|self harm|end my life|die)\b/i.test(userText);
 
@@ -364,7 +387,9 @@ const AIChatbot = () => {
     }, 500);
   };
 
+  // Add a new quick action for sharing thoughts
   const quickActions = [
+    { label: 'Share Your Thoughts', value: '__share_thoughts' },
     { label: 'Start Check-in', value: 'check-in' },
     { label: 'I feel stressed', value: 'I feel very stressed right now' },
     { label: 'I feel unsafe', value: 'I am having thoughts of harming myself' },

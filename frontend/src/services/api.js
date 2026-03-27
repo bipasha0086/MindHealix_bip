@@ -861,7 +861,7 @@ export const stressChatAPI = {
 
   sendMessage: async (roomId, payload) => {
     const response = await api.post(`/stress-chat/rooms/${roomId}/send-message`, payload);
-    return response.data.message;
+    return response.data;
   },
 
   reportMessage: async (payload) => {

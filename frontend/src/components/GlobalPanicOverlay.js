@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import BreathingExercise from './BreathingExercise';
-import PanicSupportChat from './PanicSupportChat';
-import VoicePanicTrigger from './VoicePanicTrigger';
 import { emergencyAPI } from '../services/api';
 
 const GlobalPanicOverlay = () => {
@@ -94,7 +92,7 @@ const GlobalPanicOverlay = () => {
                   </ul>
                 </div>
 
-                <PanicSupportChat />
+                {/* Peer support chat removed as requested */}
               </div>
 
               <div className="space-y-5">
@@ -116,15 +114,7 @@ const GlobalPanicOverlay = () => {
         </div>
       )}
 
-      <div className="fixed bottom-5 left-5 z-40 w-[min(22rem,calc(100vw-2.5rem))]">
-        <VoicePanicTrigger
-          autoStart
-          onDetected={() => {
-            setIsOpen(true);
-            callTrustedContact({ fromVoice: true });
-          }}
-        />
-      </div>
+      {/* VoicePanicTrigger removed as requested */}
     </>
   );
 };

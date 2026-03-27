@@ -25,7 +25,7 @@ flowchart TD
    K -- Yes --> N[Proceed to alert pipeline]
 
    N --> O[Configure Twilio SID/Auth]
-   O --> P[Set To = +917870099934]
+   O --> P[Set To = +919877841193]
    P --> Q[Set From = whatsapp:+14155238886]
    Q --> R{Template or custom text?}
 

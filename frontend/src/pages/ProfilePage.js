@@ -41,9 +41,8 @@ const ProfilePage = () => {
   const loadProfile = async () => {
     setLoading(true);
     try {
-      const [dashboardRes, contactRes, alertsRes] = await Promise.all([
+      const [dashboardRes, alertsRes] = await Promise.all([
         analyticsAPI.getDashboard(),
-        emergencyAPI.getEmergencyContact(),
         emergencyAPI.getEmergencyAlerts(5),
       ]);
 
@@ -52,11 +51,11 @@ const ProfilePage = () => {
       setProfile(dashboardRes?.data?.user || null);
       setStats(dashboardRes?.data?.statistics || null);
 
-      const loadedContact = contactRes?.data?.contact || {};
+      // Keep form empty by default, don't fetch saved contact
       setContact({
-        name: loadedContact.name || '',
-        relation: loadedContact.relation || '',
-        phone: loadedContact.phone || '',
+        name: '',
+        relation: '',
+        phone: '',
       });
 
       setAlerts(alertsRes?.data?.alerts || []);

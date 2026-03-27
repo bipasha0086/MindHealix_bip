@@ -15,18 +15,14 @@ const EmergencySupportPage = () => {
   const fetchEmergencyData = async () => {
     try {
       setLoading(true);
-      const [contactResponse, alertsResponse] = await Promise.all([
-        emergencyAPI.getEmergencyContact(),
-        emergencyAPI.getEmergencyAlerts(30),
-      ]);
+      const alertsResponse = await emergencyAPI.getEmergencyAlerts(30);
 
-      if (contactResponse?.data?.contact) {
-        setContact({
-          name: contactResponse.data.contact.name || '',
-          relation: contactResponse.data.contact.relation || '',
-          phone: contactResponse.data.contact.phone || '',
-        });
-      }
+      // Keep form empty by default, don't fetch saved contact
+      setContact({
+        name: '',
+        relation: '',
+        phone: '',
+      });
 
       setAlerts(alertsResponse?.data?.alerts || []);
     } catch (error) {

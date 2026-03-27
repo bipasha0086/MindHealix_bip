@@ -140,29 +140,7 @@ const AIDailyPrompts = ({ mood, onPromptSelect }) => {
         })}
       </div>
 
-      {/* Custom Prompt Input */}
-      <div className="bg-white rounded-xl p-4 shadow-md">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          ✍️ Or create your own prompt:
-        </label>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={customPrompt}
-            onChange={(e) => setCustomPrompt(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleCustomPrompt()}
-            placeholder="What would you like to explore?"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-          />
-          <button
-            onClick={handleCustomPrompt}
-            disabled={!customPrompt.trim()}
-            className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Use
-          </button>
-        </div>
-      </div>
+
 
       {/* Selected Prompt Display */}
       {selectedPrompt && (
@@ -179,13 +157,36 @@ const AIDailyPrompts = ({ mood, onPromptSelect }) => {
         </div>
       )}
 
-      {/* Tip */}
-      <div className="mt-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
-        <p className="text-xs text-gray-700">
-          💡 <span className="font-medium">Pro tip:</span> Take 5-10 minutes to respond
-          thoughtfully. Your honest reflections help AI provide better insights.
-        </p>
-      </div>
+
+
+
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeInUp {
+          animation: fadeInUp 0.7s cubic-bezier(0.23, 1, 0.32, 1) both;
+        }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 2.5s infinite;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 1.2s both;
+        }
+        .delay-100 {
+          animation-delay: 0.1s;
+        }
+      `}</style>
 
       <style jsx>{`
         @keyframes slideIn {

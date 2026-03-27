@@ -14,7 +14,6 @@ const NAV_ICON = {
   Assessment: '🧠',
   'Panic Mode': '🆘',
   Emergency: '🚨',
-  'Peer Support': '🌍',
   'YT Guard': '🛡️',
   Login: '🔐',
   Register: '✨',
@@ -82,11 +81,11 @@ const Navbar = () => {
         { path: '/mood-tracker', label: 'Mood Tracker' },
         { path: '/journal', label: 'Journal' },
         { path: '/analytics', label: 'Analytics' },
+        { path: '/share-thoughts', label: 'Share Your Thoughts' },
         { path: '/stress-lab', label: 'Stress Lab' },
         { path: '/assessment', label: 'Assessment' },
         { path: '/panic-mode', label: 'Panic Mode' },
         { path: '/emergency-support', label: 'Emergency' },
-        { path: '/stress-support-chat', label: 'Peer Support' },
         { path: '/youtube-guard-admin', label: 'YT Guard' },
       ]
     : [];

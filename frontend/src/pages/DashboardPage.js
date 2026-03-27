@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { analyticsAPI } from '../services/api';
 import AIWellnessScore from '../components/AIWellnessScore';
 import RelaxationSounds from '../components/RelaxationSounds';
+import ShareYourThoughts from '../components/ShareYourThoughts';
 
 const POSITIVE_THOUGHTS = [
   'Your heart matters. Be as kind to yourself as you would be to someone you love.',
@@ -251,6 +252,8 @@ const DashboardPage = () => {
           <h1 className="module-title">Welcome, {user?.name || 'Friend'} 👋</h1>
           <p className="module-subtitle">Your personal wellness overview — all modules in one place.</p>
         </div>
+
+
 
         {/* ── Motivational Thought + Companion Card ── */}
         <div className="grid lg:grid-cols-[1.45fr_0.95fr] gap-4 mb-6">

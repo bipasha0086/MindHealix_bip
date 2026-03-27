@@ -9,6 +9,7 @@ A comprehensive full-stack application with AI-powered sentiment analysis and me
 ## 📦 What Has Been Created
 
 ### Backend (Python/Flask)
+
 ✅ REST API with JWT authentication
 ✅ User registration and login system
 ✅ Mood tracking endpoints
@@ -19,6 +20,7 @@ A comprehensive full-stack application with AI-powered sentiment analysis and me
 ✅ MongoDB integration
 
 ### Frontend (React.js)
+
 ✅ Modern responsive UI with Tailwind CSS
 ✅ User authentication pages
 ✅ Dashboard with statistics

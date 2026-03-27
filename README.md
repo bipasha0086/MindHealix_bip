@@ -8,13 +8,14 @@ A comprehensive full-stack application that helps users monitor stress levels an
 
 ## 🌟 Features
 
-- **User Authentication**: Secure signup/login with JWT tokens and password hashing
-- **Mood Tracking**: Daily mood logging with multiple emotional states
-- **Journal Entries**: Text-based emotional expression and analysis
-- **AI Stress Detection**: Machine learning-powered sentiment analysis and stress prediction
-- **Mental Health Suggestions**: Personalized recommendations based on emotional state
-- **Analytics Dashboard**: Visual representation of mood trends and stress levels
-- **Progress Tracking**: Weekly and monthly emotional wellness insights
+
+**User Authentication**: Secure signup/login with JWT tokens and password hashing
+**Mood Tracking**: Daily mood logging with multiple emotional states
+**Journal Entries**: Text-based emotional expression and analysis
+**AI Stress Detection**: Machine learning-powered sentiment analysis and stress prediction
+**Mental Health Suggestions**: Personalized recommendations based on emotional state
+**Analytics Dashboard**: Visual representation of mood trends and stress levels
+**Progress Tracking**: Weekly and monthly emotional wellness insights
 
 ## 🛠️ Tech Stack
 

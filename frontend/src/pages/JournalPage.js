@@ -11,28 +11,35 @@ const ENTRIES_KEY = 'wellnesshub_mood_entries';
 const readEntries = () => {
   try {
     const raw = localStorage.getItem(ENTRIES_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
 };
 
-const getJournalStreak = (entries) => {
-  const dates = [...new Set(
-    entries.filter(e => e.has_journal && e.date).map(e => e.date)
-  )].sort().reverse();
-  if (!dates.length) return 0;
-  let streak = 0;
-  let check = new Date().toISOString().split('T')[0];
-  for (const date of dates) {
-    if (date === check) {
+function getJournalStreak(entries) {
+  if (!entries || !entries.length) return 0;
+  // Sort entries by date descending
+  const sorted = [...entries]
+    .filter(e => e.has_journal)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (!sorted.length) return 0;
+  let streak = 1;
+  let check = sorted[0].date;
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(check);
+    prev.setDate(prev.getDate() - 1);
+    const prevStr = prev.toISOString().split('T')[0];
+    if (sorted[i].date === prevStr) {
       streak++;
-      const d = new Date(check);
-      d.setDate(d.getDate() - 1);
-      check = d.toISOString().split('T')[0];
-    } else break;
+      check = prevStr;
+    } else {
+      break;
+    }
   }
   return streak;
-};
+}
 
 const sentimentMeta = (score) => {
   if (score > 0.4)  return { label: 'Very Positive', color: 'text-emerald-600', pill: 'bg-emerald-100 text-emerald-700' };
@@ -133,280 +140,305 @@ const JournalPage = () => {
   };
 
   return (
-    <div className="module-shell">
-      <div className="module-container">
-        {/* Header */}
-        <div className="module-header-card mb-6">
-          <div className="flex items-start justify-between flex-wrap gap-3">
-            <div>
-              <h1 className="module-title">Journal Module</h1>
-              <p className="module-subtitle">Reflect with writing or voice and receive AI emotion insights.</p>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              {streak > 0 && (
-                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5">
-                  <span className="text-lg">🔥</span>
-                  <span className="text-sm font-bold text-amber-700">{streak}-day streak</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1.5 bg-sky-50 border border-sky-200 rounded-xl px-3 py-1.5">
-                <span className="text-lg">📒</span>
-                <span className="text-sm font-semibold text-sky-700">{pastEntries.length} entries saved</span>
+    <>
+      <div className="module-shell animate-fadeInJournal">
+        <div className="module-container">
+          {/* Header */}
+          <div className="module-header-card mb-6">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div>
+                <h1 className="module-title">Journal Module</h1>
+                <p className="module-subtitle">Reflect with writing or voice and receive AI emotion insights.</p>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            <div className="module-panel">
-              <h3 className="module-section-title">Mood Context</h3>
-              <select
-                value={selectedMood}
-                onChange={(e) => setSelectedMood(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-200"
-              >
-                <option>Happy</option>
-                <option>Neutral</option>
-                <option>Sad</option>
-                <option>Stressed</option>
-                <option>Anxious</option>
-                <option>Excited</option>
-              </select>
-            </div>
-
-            {/* Tags */}
-            <div className="module-panel">
-              <h3 className="module-section-title">Entry Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {TAGS_LIST.map(tag => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                      selectedTags.includes(tag)
-                        ? 'bg-sky-500 text-white border-sky-500 shadow-sm'
-                        : 'bg-white text-slate-600 border-slate-300 hover:border-sky-400 hover:text-sky-600'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="module-panel">
-              <h3 className="module-section-title">AI Prompt Ideas</h3>
-              <AIDailyPrompts
-                mood={selectedMood}
-                onPromptSelect={(prompt) => setText((prev) => `${prev}\n\n${prompt}\n\n`)}
-              />
-            </div>
-
-            {analysis && (
-              <div className="module-panel border border-slate-200">
-                <h3 className="module-section-title-tight mb-3">AI Analysis</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Sentiment</span>
-                    <span className={`font-semibold ${sentimentMeta(analysis.sentiment?.compound || 0).color}`}>
-                      {sentimentMeta(analysis.sentiment?.compound || 0).label}
-                    </span>
+              <div className="flex items-center gap-3 flex-wrap">
+                {streak > 0 && (
+                  <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5">
+                    <span className="text-lg">🔥</span>
+                    <span className="text-sm font-bold text-amber-700">{streak}-day streak</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Score</span>
-                    <span className="font-mono text-slate-700">{Number(analysis.sentiment?.compound || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Emotional state</span>
-                    <span className="font-semibold text-slate-700">{analysis.emotional_state || 'Neutral'}</span>
-                  </div>
-                  {/* Sentiment bar */}
-                  <div className="mt-2">
-                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          (analysis.sentiment?.compound || 0) >= 0 ? 'bg-emerald-400' : 'bg-rose-400'
-                        }`}
-                        style={{ width: `${Math.abs((analysis.sentiment?.compound || 0)) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  {keywords.positive.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs text-slate-400 mb-1.5">Positive keywords</p>
-                      <div className="flex flex-wrap gap-1">
-                        {keywords.positive.slice(0, 6).map(k => (
-                          <span key={k} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">{k}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {keywords.negative.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs text-slate-400 mb-1.5">Detected stressors</p>
-                      <div className="flex flex-wrap gap-1">
-                        {keywords.negative.slice(0, 6).map(k => (
-                          <span key={k} className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full text-xs font-medium">{k}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Main Writing Area */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="module-panel">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="section-heading">Your Journal Entry</h2>
-                <div className="flex items-center space-x-2 bg-slate-100 rounded-lg p-1">
-                  <button
-                    type="button"
-                    onClick={() => setUseVoice(false)}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-                      !useVoice ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                    }`}
-                  >
-                    Text
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUseVoice(true)}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-                      useVoice ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                    }`}
-                  >
-                    Voice
-                  </button>
-                </div>
-              </div>
-
-              {useVoice ? (
-                <VoiceInput onTranscript={(transcript) => setText((prev) => prev + ' ' + transcript)} />
-              ) : (
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  rows="12"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-sky-200 resize-none"
-                  placeholder="Write what you are feeling and what happened today..."
-                />
-              )}
-
-              {/* Word Goal Progress Bar */}
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-slate-500 mb-1">
-                  <span>{wordCount} / {WORD_GOAL} word goal</span>
-                  <span>{readingTime} min read · {text.length} chars</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      wordGoalPct >= 100 ? 'bg-emerald-500' : wordGoalPct >= 50 ? 'bg-sky-400' : 'bg-slate-400'
-                    }`}
-                    style={{ width: `${wordGoalPct}%` }}
-                  />
-                </div>
-                {wordGoalPct >= 100 && (
-                  <p className="text-xs text-emerald-600 mt-1 font-medium">🎉 Goal reached! Great reflection session.</p>
                 )}
+                <div className="flex items-center gap-1.5 bg-sky-50 border border-sky-200 rounded-xl px-3 py-1.5">
+                  <span className="text-lg">📒</span>
+                  <span className="text-sm font-semibold text-sky-700">{pastEntries.length} entries saved</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="module-panel">
+                <h3 className="module-section-title">Mood Context</h3>
+                <select
+                  value={selectedMood}
+                  onChange={(e) => setSelectedMood(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-sky-200"
+                >
+                  <option>Happy</option>
+                  <option>Neutral</option>
+                  <option>Sad</option>
+                  <option>Stressed</option>
+                  <option>Anxious</option>
+                  <option>Excited</option>
+                </select>
               </div>
 
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setText('')} className="module-btn-secondary">
-                    Clear
-                  </button>
-                  {text.trim() && (
-                    <button onClick={handleExport} className="module-btn-secondary" title="Download as .txt">
-                      ↓ Export
+              {/* Tags */}
+              <div className="module-panel">
+                <h3 className="module-section-title">Entry Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {TAGS_LIST.map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                        selectedTags.includes(tag)
+                          ? 'bg-sky-500 text-white border-sky-500 shadow-sm'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-sky-400 hover:text-sky-600'
+                      }`}
+                    >
+                      {tag}
                     </button>
-                  )}
-                </div>
-                <div className="module-actions-row sm:justify-end">
-                  <button onClick={handleAnalyze} disabled={loading} className="module-btn-primary">
-                    {loading ? 'Analyzing...' : '🔍 Analyze'}
-                  </button>
-                  <button onClick={handleSaveJournal} disabled={saving || !text.trim()} className="module-btn-success">
-                    {saving ? 'Saving...' : '💾 Save Entry'}
-                  </button>
+                  ))}
                 </div>
               </div>
 
-              {savedMessage && (
-                <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  ✅ {savedMessage}
+              <div className="module-panel">
+                <h3 className="module-section-title">AI Prompt Ideas</h3>
+                <AIDailyPrompts
+                  mood={selectedMood}
+                  onPromptSelect={(prompt) => setText((prev) => `${prev}\n\n${prompt}\n\n`)}
+                />
+              </div>
+
+              {analysis && (
+                <div className="module-panel border border-slate-200">
+                  <h3 className="module-section-title-tight mb-3">AI Analysis</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">Sentiment</span>
+                      <span className={`font-semibold ${sentimentMeta(analysis.sentiment?.compound || 0).color}`}>
+                        {sentimentMeta(analysis.sentiment?.compound || 0).label}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">Score</span>
+                      <span className="font-mono text-slate-700">{Number(analysis.sentiment?.compound || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">Emotional state</span>
+                      <span className="font-semibold text-slate-700">{analysis.emotional_state || 'Neutral'}</span>
+                    </div>
+                    {/* Sentiment bar */}
+                    <div className="mt-2">
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            (analysis.sentiment?.compound || 0) >= 0 ? 'bg-emerald-400' : 'bg-rose-400'
+                          }`}
+                          style={{ width: `${Math.abs((analysis.sentiment?.compound || 0)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    {keywords.positive.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-slate-400 mb-1.5">Positive keywords</p>
+                        <div className="flex flex-wrap gap-1">
+                          {keywords.positive.slice(0, 6).map(k => (
+                            <span key={k} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">{k}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {keywords.negative.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-slate-400 mb-1.5">Detected stressors</p>
+                        <div className="flex flex-wrap gap-1">
+                          {keywords.negative.slice(0, 6).map(k => (
+                            <span key={k} className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full text-xs font-medium">{k}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
-            {text && text.length > 10 && (
+            {/* Main Writing Area */}
+            <div className="lg:col-span-2 space-y-6">
               <div className="module-panel">
-                <h2 className="module-section-title">Real-time Sentiment</h2>
-                <RealTimeSentiment text={text} onAnalysisComplete={(data) => setAnalysis(data)} />
-              </div>
-            )}
-
-            {analysis && analysis.sentiment?.compound < -0.3 && (
-              <div className="rounded-2xl bg-amber-50 border border-amber-100 p-5">
-                <h3 className="font-bold text-slate-900 mb-2">💛 Support Suggestion</h3>
-                <p className="text-sm text-slate-700">
-                  Your writing shows emotional load. Consider contacting a trusted person, taking a short grounding break, and using the guided check-in in chat.
-                </p>
-              </div>
-            )}
-
-            {/* Past Entries */}
-            {pastEntries.length > 0 && (
-              <div className="module-panel">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="module-section-title" style={{ marginBottom: 0 }}>Past Entries</h2>
-                  <button
-                    type="button"
-                    onClick={() => setShowPast(p => !p)}
-                    className="text-sm text-sky-600 hover:text-sky-800 font-medium"
-                  >
-                    {showPast ? 'Collapse ▲' : `Show ${pastEntries.length} entries ▼`}
-                  </button>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="section-heading">Your Journal Entry</h2>
+                  <div className="flex items-center space-x-2 bg-slate-100 rounded-lg p-1">
+                    <button
+                      type="button"
+                      onClick={() => setUseVoice(false)}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                        !useVoice ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+                      }`}
+                    >
+                      Text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUseVoice(true)}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                        useVoice ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+                      }`}
+                    >
+                      Voice
+                    </button>
+                  </div>
                 </div>
-                {showPast && (
-                  <div className="space-y-3 mt-2">
-                    {pastEntries.map((entry) => {
-                      const sm = sentimentMeta(entry.sentiment_score || 0);
-                      const wc = entry.journal_text ? entry.journal_text.trim().split(/\s+/).length : 0;
-                      return (
-                        <div
-                          key={entry.id}
-                          className="rounded-xl border border-slate-200 bg-slate-50 p-3 hover:border-sky-300 hover:bg-sky-50 transition-all cursor-pointer"
-                          onClick={() => loadEntry(entry)}
-                          title="Click to load this entry into editor"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-slate-500">{entry.date}</span>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-medium">{entry.mood}</span>
-                              <span className={`text-xs font-semibold ${sm.color}`}>{sm.label}</span>
-                            </div>
-                            <span className="text-xs text-slate-400">{wc} words</span>
-                          </div>
-                          <p className="text-sm text-slate-600 line-clamp-2">
-                            {entry.journal_text?.slice(0, 160)}{entry.journal_text?.length > 160 ? '…' : ''}
-                          </p>
-                        </div>
-                      );
-                    })}
+
+                {useVoice ? (
+                  <VoiceInput onTranscript={(transcript) => setText((prev) => prev + ' ' + transcript)} />
+                ) : (
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    rows="12"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-sky-200 resize-none"
+                    placeholder="Write what you are feeling and what happened today..."
+                  />
+                )}
+
+                {/* Word Goal Progress Bar */}
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span>{wordCount} / {WORD_GOAL} word goal</span>
+                    <span>{readingTime} min read · {text.length} chars</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        wordGoalPct >= 100 ? 'bg-emerald-500' : wordGoalPct >= 50 ? 'bg-sky-400' : 'bg-slate-400'
+                      }`}
+                      style={{ width: `${wordGoalPct}%` }}
+                    />
+                  </div>
+                  {wordGoalPct >= 100 && (
+                    <p className="text-xs text-emerald-600 mt-1 font-medium">🎉 Goal reached! Great reflection session.</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setText('')} className="module-btn-secondary">
+                      Clear
+                    </button>
+                    {text.trim() && (
+                      <button onClick={handleExport} className="module-btn-secondary" title="Download as .txt">
+                        ↓ Export
+                      </button>
+                    )}
+                  </div>
+                  <div className="module-actions-row sm:justify-end">
+                    <button onClick={handleAnalyze} disabled={loading} className="module-btn-primary">
+                      {loading ? 'Analyzing...' : '🔍 Analyze'}
+                    </button>
+                    <button onClick={handleSaveJournal} disabled={saving || !text.trim()} className="module-btn-success">
+                      {saving ? 'Saving...' : '💾 Save Entry'}
+                    </button>
+                  </div>
+                </div>
+
+                {savedMessage && (
+                  <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                    ✅ {savedMessage}
                   </div>
                 )}
               </div>
-            )}
+
+              {text && text.length > 10 && (
+                <div className="module-panel">
+                  <h2 className="module-section-title">Real-time Sentiment</h2>
+                  <RealTimeSentiment text={text} onAnalysisComplete={(data) => setAnalysis(data)} />
+                </div>
+              )}
+
+              {analysis && analysis.sentiment?.compound < -0.3 && (
+                <div className="rounded-2xl bg-amber-50 border border-amber-100 p-5">
+                  <h3 className="font-bold text-slate-900 mb-2">💛 Support Suggestion</h3>
+                  <p className="text-sm text-slate-700">
+                    Your writing shows emotional load. Consider contacting a trusted person, taking a short grounding break, and using the guided check-in in chat.
+                  </p>
+                </div>
+              )}
+
+              {/* Past Entries */}
+              {pastEntries.length > 0 && (
+                <div className="module-panel">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="module-section-title" style={{ marginBottom: 0 }}>Past Entries</h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowPast(p => !p)}
+                      className="text-sm text-sky-600 hover:text-sky-800 font-medium"
+                    >
+                      {showPast ? 'Collapse ▲' : `Show ${pastEntries.length} entries ▼`}
+                    </button>
+                  </div>
+                  {showPast && (
+                    <div className="space-y-3 mt-2">
+                      {pastEntries.map((entry, idx) => {
+                        const sm = sentimentMeta(entry.sentiment_score || 0);
+                        const wc = entry.journal_text ? entry.journal_text.trim().split(/\s+/).length : 0;
+                        return (
+                          <div
+                            key={entry.id}
+                            className={
+                              `rounded-xl border border-slate-200 bg-slate-50 p-3 cursor-pointer transition-all duration-300 ease-out 
+                              hover:border-indigo-400 hover:bg-gradient-to-br hover:from-indigo-50 hover:to-sky-100 
+                              hover:scale-[1.025] shadow-sm hover:shadow-lg animate-fadeInUp`
+                            }
+                            onClick={() => loadEntry(entry)}
+                            title="Click to load this entry into editor"
+                            style={{ animationDelay: `${idx * 60}ms` }}
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-semibold text-slate-500">{entry.date}</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-medium">{entry.mood}</span>
+                                <span className={`text-xs font-semibold ${sm.color}`}>{sm.label}</span>
+                              </div>
+                              <span className="text-xs text-slate-400">{wc} words</span>
+                            </div>
+                            <p className="text-sm text-slate-600 line-clamp-2">
+                              {entry.journal_text?.slice(0, 160)}{entry.journal_text?.length > 160 ? '…' : ''}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      <style jsx>{`
+                        @keyframes fadeInUp {
+                          from { opacity: 0; transform: translateY(30px); }
+                          to { opacity: 1; transform: translateY(0); }
+                        }
+                        .animate-fadeInUp {
+                          animation: fadeInUp 0.7s cubic-bezier(0.23, 1, 0.32, 1) both;
+                        }
+                      `}</style>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <style jsx>{`
+        @keyframes fadeInJournal {
+          from { opacity: 0; transform: translateY(40px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-fadeInJournal {
+          animation: fadeInJournal 1.1s cubic-bezier(0.23, 1, 0.32, 1) both;
+        }
+      `}</style>
+    </>
   );
 };
 
