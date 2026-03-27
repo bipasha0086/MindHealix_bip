@@ -23,6 +23,9 @@ import Navbar from './components/Navbar';
 import AIChatbot from './components/AIChatbot';
 import GlobalPanicOverlay from './components/GlobalPanicOverlay';
 
+// Notification utility
+import { requestNotificationPermission, startHourlyNotifications } from './NotificationManager';
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -39,6 +42,21 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  React.useEffect(() => {
+    requestNotificationPermission();
+    // Start notifications after permission is granted
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        startHourlyNotifications();
+      } else {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            startHourlyNotifications();
+          }
+        });
+      }
+    }
+  }, []);
   return (
     <AuthProvider>
       <Router>
