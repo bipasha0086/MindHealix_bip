@@ -336,105 +336,7 @@ export const moodAPI = {
   submitMood: async (data) => {
     if (!LOCAL_MODE) return api.post('/submit-mood', data);
 
-    const user = getSessionUser();
-    const userId = user?.id || 'local-user';
-    const sentiment = analyzeSentimentLocal(data?.journal_text || '');
-    const mood = data?.mood || 'Neutral';
-    const sleepHours = Number(data?.sleep_hours || 7);
-
-    let stressLevel = null;
-    let predictionSource = null;
-    let recommendations = null;
-
-    try {
-      const backendPrediction = await api.post('/predict-stress', {
-        mood,
-        sleep_hours: sleepHours,
-        journal_text: data?.journal_text || '',
-        sentiment_score: sentiment.sentiment.compound,
-      });
-
-      stressLevel = backendPrediction?.data?.prediction?.stress_level || null;
-      predictionSource = backendPrediction?.data?.prediction?.prediction_source || null;
-      recommendations = backendPrediction?.data?.prediction?.recommendations || null;
-    } catch (_error) {
-      // Backend prediction is optional in local mode; fallback is applied below.
-    }
-
-    const fallbackStressRating = computeStressRating({
-      mood,
-      sleepHours,
-      compound: sentiment.sentiment.compound,
-      journalText: data?.journal_text || '',
-    });
-
-    const entry = {
-      id: `${Date.now()}`,
-      user_id: userId,
-      mood,
-      stress_level: stressLevel || fallbackStressRating.stressLevel,
-      prediction_source: predictionSource || 'local_ai',
-      stress_score: fallbackStressRating.stressScore,
-      sleep_hours: sleepHours,
-      sentiment_score: sentiment.sentiment.compound,
-      has_journal: Boolean(data?.journal_text?.trim()),
-      journal_text: data?.journal_text || '',
-      date: toDateOnly(data?.date || new Date().toISOString()),
-      recommendations:
-        recommendations ||
-        buildRecommendations({
-          stressLevel: stressLevel || fallbackStressRating.stressLevel,
-          stressScore: fallbackStressRating.stressScore,
-          mood,
-        }),
-    };
-
-    const entries = getEntries();
-    entries.push(entry);
-    saveEntries(entries);
-
-    const contact = getEmergencyContactLocal(userId);
-    let emergency_notification = {
-      sent: false,
-      message: 'No emergency alert was required for this entry.',
-    };
-
-    if (entry.stress_level === 'High') {
-      if (contact?.phone && contact?.name) {
-        const alerts = getEmergencyAlertsLocal(userId);
-        const alert = {
-          id: `alert_${Date.now()}`,
-          message: `High stress alert for ${user?.name || 'the user'}. Please check in as soon as possible.`,
-          stress_level: 'High',
-          status: 'sent',
-          contact: {
-            name: contact.name,
-            relation: contact.relation || '',
-            phone: contact.phone,
-          },
-          mood_entry_id: entry.id,
-          created_at: new Date().toISOString(),
-          read: false,
-        };
-        alerts.unshift(alert);
-        saveEmergencyAlertsLocal(userId, alerts.slice(0, 100));
-
-        emergency_notification = {
-          sent: true,
-          alert_id: alert.id,
-          contact_name: contact.name,
-          contact_phone: contact.phone,
-          message: 'Emergency contact was notified for high stress.',
-        };
-      } else {
-        emergency_notification = {
-          sent: false,
-          message: 'High stress detected, but no emergency contact is configured.',
-        };
-      }
-    }
-
-    return responseOf({ message: 'Mood entry stored locally', entry, emergency_notification });
+    // ...existing code...
   },
   analyzeText: (data) => {
     if (!LOCAL_MODE) return api.post('/analyze-text', data);
@@ -445,6 +347,7 @@ export const moodAPI = {
     if (!LOCAL_MODE) return api.get('/mood-categories');
     return responseOf({ moods: ['Happy', 'Neutral', 'Sad', 'Stressed', 'Anxious', 'Excited'] });
   },
+  recommendByMood: (mood, age) => api.post('/recommend-by-mood', age ? { mood, age } : { mood }),
 };
 
 // Analytics API

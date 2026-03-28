@@ -26,6 +26,9 @@ const FaceStressCheck = ({ onResult }) => {
   const [result, setResult] = useState(null);
 
   useEffect(() => {
+    if (isMobileDevice()) {
+      setError('Facial stress detection is only supported on laptop/desktop browsers. Please use a laptop or desktop for this feature.');
+    }
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
@@ -86,6 +89,11 @@ const FaceStressCheck = ({ onResult }) => {
       return;
     }
 
+    if (isMobileDevice()) {
+      setError('Facial stress detection is only supported on laptop/desktop browsers. Please use a laptop or desktop for this feature.');
+      return;
+    }
+
     try {
       try {
         await initLandmarker();
@@ -93,10 +101,7 @@ const FaceStressCheck = ({ onResult }) => {
         setError('Camera started without local landmark analysis. Server-side image prediction will be used if available.');
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' },
-        audio: false,
-      });
+      const stream = await navigator.mediaDevices.getUserMedia(getLocalCameraConstraints());
 
       streamRef.current = stream;
       if (videoRef.current) {
@@ -357,3 +362,21 @@ const FaceStressCheck = ({ onResult }) => {
 };
 
 export default FaceStressCheck;
+
+// Utility to detect mobile devices
+function isMobileDevice() {
+  return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+}
+
+// Utility to force local (laptop/desktop) camera
+function getLocalCameraConstraints() {
+  return {
+    video: {
+      width: 640,
+      height: 480,
+      facingMode: { exact: 'user' }, // Prefer front camera, but on desktop this is always the webcam
+      deviceId: undefined // Let browser pick the default webcam
+    },
+    audio: false
+  };
+}

@@ -10,11 +10,14 @@ const NAV_ICON = {
   'Mood Tracker': '😊',
   Journal: '📝',
   Analytics: '📈',
+  'Share Your Thoughts': '💬',
   'Stress Lab': '🧪',
   Assessment: '🧠',
   'Panic Mode': '🆘',
   Emergency: '🚨',
   'YT Guard': '🛡️',
+  'Screentime': '⏰',
+  Recommendation: '🌟',
   Login: '🔐',
   Register: '✨',
 };
@@ -87,6 +90,7 @@ const Navbar = () => {
         { path: '/panic-mode', label: 'Panic Mode' },
         { path: '/emergency-support', label: 'Emergency' },
         { path: '/youtube-guard-admin', label: 'YT Guard' },
+        { path: '/recommendation', label: 'Recommendation' },
       ]
     : [];
 
@@ -131,24 +135,35 @@ const Navbar = () => {
               <BrandMark subtitle="Because Every Mind Deserves to Be Heard." linkTo="/" />
             </div>
 
-            <div className="hidden lg:flex items-center gap-2">
-              {quickHeaderLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
-                    isActive(link.path)
-                      ? 'bg-cyan-100 text-cyan-800'
-                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
             {user ? (
-              <div className="relative" ref={profileRef}>
+              <div className="hidden lg:flex items-center gap-2">
+                {quickHeaderLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                      isActive(link.path)
+                        ? 'bg-cyan-100 text-cyan-800'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <Link
+                  to="/recommendation"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-cyan-100 transition ${location.pathname === '/recommendation' ? 'bg-cyan-100 font-bold' : ''}`}
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  <span>{NAV_ICON['Recommendation']}</span> Recommendation
+                </Link>
+                <Link
+                  to="/screentime"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-cyan-100 transition ${location.pathname === '/screentime' ? 'bg-cyan-100 font-bold' : ''}`}
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  <span>{NAV_ICON['Screentime']}</span> Screentime
+                </Link>
                 <button
                   type="button"
                   onClick={() => setProfileOpen((prev) => !prev)}
@@ -160,7 +175,6 @@ const Navbar = () => {
                   <span className="hidden sm:block text-sm font-semibold text-slate-800 max-w-[120px] truncate">{user.name}</span>
                   <span className="text-slate-500 text-xs">▾</span>
                 </button>
-
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-60 rounded-xl border border-slate-200 bg-white shadow-lg p-2 z-50">
                     <div className="px-3 py-2 border-b border-slate-100">
@@ -244,17 +258,12 @@ const Navbar = () => {
               key={link.path}
               to={link.path}
               onClick={closeDrawer}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition ${
-                isActive(link.path)
-                  ? 'bg-cyan-100 text-cyan-900 ring-1 ring-cyan-200'
-                  : 'text-slate-700 hover:bg-slate-100'
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-all text-base hover:bg-cyan-50 focus:bg-cyan-100 focus:outline-none ${
+                isActive(link.path) ? 'bg-cyan-100 text-cyan-900' : 'text-slate-700'
               }`}
             >
-              <span className="flex items-center gap-2">
-                <span aria-hidden="true">{NAV_ICON[link.label] || '•'}</span>
-                <span>{link.label}</span>
-              </span>
-              {isActive(link.path) && <span className="text-cyan-700">●</span>}
+              <span className="text-xl">{NAV_ICON[link.label] || '•'}</span>
+              {link.label}
             </Link>
           ))}
         </div>

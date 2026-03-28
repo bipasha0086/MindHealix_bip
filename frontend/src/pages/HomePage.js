@@ -1,4 +1,5 @@
 import React from 'react';
+import ScreentimeModule from '../components/ScreentimeModule';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BrandMark from '../components/BrandMark';
@@ -125,6 +126,12 @@ const HomePage = () => {
             </div>
           ))}
         </div>
+        </PageContainer>
+      </section>
+      {/* Screen Time Module Section */}
+      <section className="py-10">
+        <PageContainer>
+          <ScreentimeModule />
         </PageContainer>
       </section>
     </div>

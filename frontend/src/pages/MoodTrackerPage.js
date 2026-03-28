@@ -6,6 +6,7 @@ import VoiceInput from '../components/VoiceInput';
 import RealTimeSentiment from '../components/RealTimeSentiment';
 import AIDailyPrompts from '../components/AIDailyPrompts';
 import FaceStressCheck from '../components/FaceStressCheck';
+import MoodRecommendation from '../components/MoodRecommendation';
 
 const MoodTrackerPage = () => {
   const [selectedMood, setSelectedMood] = useState('');
